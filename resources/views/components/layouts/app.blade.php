@@ -6,9 +6,9 @@
     $nav = [
         ['label' => 'Dashboard', 'icon' => 'dashboard', 'section' => 'Campus', 'route' => $user?->dashboardRoute(), 'active' => ['dashboard.redirect', $user?->dashboardRoute()], 'roles' => ['directeur', 'surveillant', 'formateur', 'stagiaire']],
         ['label' => 'Users', 'icon' => 'users', 'section' => 'Administration', 'route' => 'users.index', 'active' => ['users.*', 'staff.*', 'stagiaires.*', 'profile.show'], 'roles' => ['directeur', 'surveillant']],
-        ['label' => 'Timetable', 'icon' => 'calendar', 'section' => 'Administration', 'route' => 'timetable.index', 'active' => ['timetable.index', 'timetable.store', 'timetable.edit', 'timetable.update', 'timetable.destroy'], 'roles' => ['surveillant']],
+        ['label' => 'Timetable', 'icon' => 'calendar', 'section' => 'Administration', 'route' => 'timetable.index', 'active' => ['timetable.index', 'timetable.active-week', 'timetable.store', 'timetable.edit', 'timetable.update', 'timetable.destroy'], 'roles' => ['surveillant']],
         ['label' => 'Resources', 'icon' => 'layers', 'section' => 'Administration', 'route' => 'resources.index', 'active' => ['resources.*'], 'roles' => ['surveillant']],
-        ['label' => 'My Schedule', 'icon' => 'clock', 'section' => 'Daily work', 'route' => 'timetable.mine', 'active' => ['timetable.mine'], 'roles' => ['formateur', 'stagiaire']],
+        ['label' => 'My Schedule', 'icon' => 'clock', 'section' => 'Daily work', 'route' => 'timetable.mine', 'active' => ['timetable.mine'], 'roles' => ['directeur', 'surveillant', 'formateur', 'stagiaire']],
         ['label' => 'Attendance', 'icon' => 'check', 'section' => 'Daily work', 'route' => 'attendance.index', 'active' => ['attendance.index', 'attendance.show', 'attendance.manual.*', 'attendance.qr.*'], 'roles' => ['formateur']],
         ['label' => 'Check In', 'icon' => 'qr', 'section' => 'Daily work', 'route' => 'attendance.check-in', 'active' => ['attendance.check-in', 'attendance.scan', 'attendance.code.*'], 'roles' => ['stagiaire']],
         ['label' => 'Reports', 'icon' => 'chart', 'section' => 'Follow-up', 'route' => 'attendance.reports', 'active' => ['attendance.reports'], 'roles' => ['directeur', 'surveillant']],

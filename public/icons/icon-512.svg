@@ -1,10 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Smart Campus OFPPT">
-  <rect width="512" height="512" rx="92" fill="#f8fafc"/>
-  <rect x="28" y="28" width="456" height="456" rx="78" fill="#ffffff" stroke="#dbe4ea" stroke-width="12"/>
-  <g transform="translate(66 162)" fill="none" stroke-linecap="square" stroke-linejoin="miter" stroke-width="28">
-    <path d="M12 96 96 12 180 96 96 180Z" stroke="#00a64f"/>
-    <path d="M110 96 194 12 278 96 194 180Z" stroke="#c9d2d8"/>
-    <path d="M208 96 292 12 376 96 292 180Z" stroke="#1489cc"/>
+  <rect width="512" height="512" rx="112" fill="#f8fafc"/>
+  <circle cx="256" cy="256" r="220" fill="#ffffff" stroke="#e5e7eb" stroke-width="14"/>
+  <circle cx="256" cy="253" r="198" fill="none" stroke="#f1f5f9" stroke-width="6"/>
+  <g fill="none" stroke-linecap="square" stroke-linejoin="miter" stroke-width="22">
+    <path d="M120 168 182 106 244 168 182 230Z" stroke="#008c50"/>
+    <path d="M187 168 249 106 311 168 249 230Z" stroke="#8d99a3"/>
+    <path d="M254 168 316 106 378 168 316 230Z" stroke="#006caf"/>
   </g>
-  <text x="256" y="406" fill="#1f2937" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="76" font-weight="700">OFPPT</text>
+  <text x="256" y="340" fill="#111827" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="90" font-weight="700" letter-spacing="1">OFPPT</text>
+  <text x="256" y="393" fill="#1f5f9f" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="33" font-style="italic" font-weight="700">La Voie de l'Avenir</text>
 </svg>

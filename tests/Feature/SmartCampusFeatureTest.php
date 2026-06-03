@@ -69,6 +69,60 @@ test('timetable pages render weekly grid layout', function () {
         ->assertSee('VENDREDI');
 });
 
+test('surveillant activates a week visible to all timetable viewers', function () {
+    $this->seed();
+
+    $surveillant = User::where('email', 'surveillant@ofppt.test')->first();
+    $directeur = User::where('email', 'directeur@ofppt.test')->first();
+    $formateur = User::where('email', 'formateur@ofppt.test')->first();
+    $existing = TimetableSession::where('formateur_id', $formateur->id)->first();
+    $nextWeekStart = now()->addWeek()->startOfWeek();
+
+    $publishedSession = TimetableSession::create([
+        'group_id' => $existing->group_id,
+        'module_id' => $existing->module_id,
+        'formateur_id' => $existing->formateur_id,
+        'room_id' => $existing->room_id,
+        'day_of_week' => 1,
+        'starts_on' => $nextWeekStart->toDateString(),
+        'ends_on' => $nextWeekStart->copy()->endOfWeek()->toDateString(),
+        'week_number' => $nextWeekStart->weekOfYear,
+        'starts_at' => '08:30',
+        'ends_at' => '10:30',
+        'created_by' => $surveillant->id,
+    ]);
+
+    $stagiaire = User::role('stagiaire')
+        ->approved()
+        ->where('group_id', $publishedSession->group_id)
+        ->first();
+
+    $this->actingAs($surveillant)->post(route('timetable.active-week'), [
+        'group_id' => $publishedSession->group_id,
+        'week_start' => $nextWeekStart->toDateString(),
+    ])->assertRedirect(route('timetable.index', [
+        'group_id' => $publishedSession->group_id,
+        'week_start' => $nextWeekStart->toDateString(),
+    ]));
+
+    $this->actingAs($directeur)
+        ->get(route('timetable.mine'))
+        ->assertOk()
+        ->assertSee('Semaine '.$nextWeekStart->weekOfYear)
+        ->assertSee($publishedSession->module->name)
+        ->assertSee($publishedSession->group->code);
+
+    $this->actingAs($formateur)
+        ->get(route('timetable.mine'))
+        ->assertOk()
+        ->assertSee($publishedSession->module->name);
+
+    $this->actingAs($stagiaire)
+        ->get(route('timetable.mine'))
+        ->assertOk()
+        ->assertSee($publishedSession->module->name);
+});
+
 test('stagiaire cannot chat with directeur', function () {
     $this->seed();
 

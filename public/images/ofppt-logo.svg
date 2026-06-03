@@ -1,8 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 310 96" role="img" aria-label="OFPPT">
-  <g transform="translate(0 12)" fill="none" stroke-linecap="square" stroke-linejoin="miter" stroke-width="8">
-    <path d="M8 36 32 12 56 36 32 60Z" stroke="#00a64f"/>
-    <path d="M36 36 60 12 84 36 60 60Z" stroke="#c9d2d8"/>
-    <path d="M64 36 88 12 112 36 88 60Z" stroke="#1489cc"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="OFPPT - La Voie de l'Avenir">
+  <defs>
+    <filter id="soft-shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#0f172a" flood-opacity=".14"/>
+    </filter>
+  </defs>
+  <circle cx="120" cy="120" r="108" fill="#f8fafc"/>
+  <circle cx="120" cy="118" r="100" fill="#ffffff" stroke="#e5e7eb" stroke-width="4" filter="url(#soft-shadow)"/>
+  <circle cx="120" cy="118" r="91" fill="none" stroke="#f1f5f9" stroke-width="2"/>
+  <g fill="none" stroke-linecap="square" stroke-linejoin="miter" stroke-width="9">
+    <path d="M55 74 85 44 115 74 85 104Z" stroke="#008c50"/>
+    <path d="M87 74 117 44 147 74 117 104Z" stroke="#8d99a3"/>
+    <path d="M119 74 149 44 179 74 149 104Z" stroke="#006caf"/>
   </g>
-  <text x="126" y="66" fill="#1f2937" font-family="Georgia, 'Times New Roman', serif" font-size="42" font-weight="700" letter-spacing="1">OFPPT</text>
+  <text x="120" y="151" fill="#111827" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="43" font-weight="700" letter-spacing=".5">OFPPT</text>
+  <text x="120" y="176" fill="#1f5f9f" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="15" font-style="italic" font-weight="700">La Voie de l'Avenir</text>
 </svg>

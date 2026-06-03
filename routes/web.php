@@ -57,6 +57,7 @@ Route::middleware(['auth', 'approved'])->group(function () {
 
     Route::middleware('role:surveillant')->group(function () {
         Route::get('/surveillant/timetable', [TimetableController::class, 'index'])->name('timetable.index');
+        Route::post('/surveillant/timetable/active-week', [TimetableController::class, 'activateWeek'])->name('timetable.active-week');
         Route::post('/surveillant/timetable', [TimetableController::class, 'store'])->name('timetable.store');
         Route::get('/surveillant/timetable/{session}/edit', [TimetableController::class, 'edit'])->name('timetable.edit');
         Route::put('/surveillant/timetable/{session}', [TimetableController::class, 'update'])->name('timetable.update');

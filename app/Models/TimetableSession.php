@@ -83,6 +83,17 @@ class TimetableSession extends Model
         return $query
             ->where('day_of_week', $date->dayOfWeekIso)
             ->whereDate('starts_on', '<=', $date->toDateString())
-            ->whereDate('ends_on', '>=', $date->toDateString());
+            ->whereDate('ends_on', '>=', $date->toDateString())
+            ->where('status', '!=', 'cancelled');
+    }
+
+    public function scopeForWeek($query, Carbon $weekStart)
+    {
+        $weekEnd = $weekStart->copy()->endOfWeek();
+
+        return $query
+            ->whereDate('starts_on', '<=', $weekEnd->toDateString())
+            ->whereDate('ends_on', '>=', $weekStart->toDateString())
+            ->where('status', '!=', 'cancelled');
     }
 }

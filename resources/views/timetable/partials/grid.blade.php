@@ -6,11 +6,14 @@
         3 => 'MERCREDI',
         4 => 'JEUDI',
         5 => 'VENDREDI',
+        6 => 'SAMEDI',
+        7 => 'DIMANCHE',
     ];
     $startHour = $startHour ?? 6;
     $endHour = $endHour ?? 18;
     $hourHeight = $hourHeight ?? 96;
     $gridHeight = ($endHour - $startHour) * $hourHeight;
+    $gridMinWidth = 88 + (count($days) * 190);
     $sessionsByDay = $sessions->groupBy('day_of_week');
     $palette = ['violet', 'teal', 'amber', 'rose', 'blue'];
     $toMinutes = function (string $time): int {
@@ -22,11 +25,14 @@
 
 <section class="edt-panel">
     <div class="edt-toolbar">
-        <div class="min-w-0">
+        <div class="edt-toolbar-main">
             @isset($groups)
                 <form method="GET" action="{{ route('timetable.index') }}" class="edt-group-select">
+                    @isset($selectedWeekStart)
+                        <input type="hidden" name="week_start" value="{{ $selectedWeekStart->toDateString() }}">
+                    @endisset
                     <span class="edt-dot"></span>
-                    <select name="group_id" aria-label="Group timetable" onchange="this.form.submit()">
+                    <select name="group_id" aria-label="Groupe" onchange="this.form.submit()">
                         @foreach ($groups as $group)
                             <option value="{{ $group->id }}" @selected((int) $selectedGroupId === $group->id)>{{ $group->name }}</option>
                         @endforeach
@@ -38,25 +44,29 @@
                     <span>{{ $scheduleLabel ?? 'Emploi du temps' }}</span>
                 </div>
             @endisset
+
+            @isset($selectedWeekStart)
+                <div class="edt-chip edt-week-chip {{ ($isSelectedWeekActive ?? false) ? 'edt-week-chip-active' : '' }}">
+                    <x-ui.icon name="calendar" size="size-4" />
+                    <span>Semaine {{ $selectedWeekStart->weekOfYear }}</span>
+                    <span class="edt-week-dates">{{ $selectedWeekStart->format('d/m') }} - {{ ($selectedWeekEnd ?? $selectedWeekStart->copy()->endOfWeek())->format('d/m/Y') }}</span>
+                </div>
+            @endisset
         </div>
 
-        <div class="edt-view-tools" aria-hidden="true">
+        <div class="edt-view-tools">
             <x-ui.icon name="clock" size="size-4" />
-            <span class="edt-range"><span style="width: 42%"></span></span>
-            <span class="edt-divider"></span>
-            <span class="edt-small-a">A</span>
-            <span class="edt-range"><span style="width: 64%"></span></span>
-            <span class="edt-large-a">A</span>
+            <span>{{ $sessions->count() }} seance{{ $sessions->count() > 1 ? 's' : '' }}</span>
         </div>
     </div>
 
     <div class="edt-grid-scroll">
-        <div class="edt-grid" style="--grid-height: {{ $gridHeight }}px; --hour-height: {{ $hourHeight }}px;">
+        <div class="edt-grid" style="--grid-height: {{ $gridHeight }}px; --hour-height: {{ $hourHeight }}px; min-width: {{ $gridMinWidth }}px; grid-template-columns: 88px repeat({{ count($days) }}, minmax(190px, 1fr));">
             <div class="edt-time-head">
                 <x-ui.icon name="clock" size="size-4" />
             </div>
             @foreach ($days as $dayName)
-                <div class="edt-day-head">{{ $dayName }}</div>
+                <div class="edt-day-head">{{ strtoupper($dayName) }}</div>
             @endforeach
 
             <div class="edt-time-axis">
@@ -76,13 +86,13 @@
                             $color = $palette[$session->id % count($palette)];
                         @endphp
                         @if ($end > $start)
-                            <article class="edt-event edt-event-{{ $color }}" style="top: {{ $top }}px; height: {{ $height }}px;">
+                            <article class="edt-event edt-event-{{ $color }} {{ ($showActions ?? false) ? 'edt-event-actionable' : '' }}" style="top: {{ $top }}px; height: {{ $height }}px;">
                                 <div class="truncate text-xs font-bold">{{ $session->timeLabel() }}</div>
                                 <div class="mt-1 truncate text-sm font-black">{{ $session->module->name }}</div>
                                 <div class="mt-1 truncate text-xs">{{ $session->group->code }} | {{ $session->room->code }}</div>
                                 <div class="mt-1 truncate text-[11px] opacity-80">{{ $session->formateur->name }}</div>
                                 @if ($showActions ?? false)
-                                    <a href="{{ route('timetable.edit', $session) }}" class="edt-event-link">Edit</a>
+                                    <a href="{{ route('timetable.edit', $session) }}" class="edt-event-link">Modifier</a>
                                 @endif
                             </article>
                         @endif

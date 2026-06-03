@@ -241,9 +241,13 @@
         @apply flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-slate-50/60 px-4 py-4;
     }
 
+    .edt-toolbar-main {
+        @apply flex min-w-0 flex-1 flex-wrap items-center gap-3;
+    }
+
     .edt-chip,
     .edt-group-select {
-        @apply inline-flex max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-primary shadow-sm;
+        @apply inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-black text-primary shadow-sm;
     }
 
     .edt-group-select select {
@@ -254,8 +258,20 @@
         @apply size-2.5 shrink-0 rounded-full bg-primary;
     }
 
+    .edt-week-chip {
+        @apply text-slate-700;
+    }
+
+    .edt-week-chip-active {
+        @apply border-emerald-200 bg-emerald-50 text-emerald-700;
+    }
+
+    .edt-week-dates {
+        @apply border-l border-slate-200 pl-2 text-xs font-bold text-slate-500;
+    }
+
     .edt-view-tools {
-        @apply ml-auto flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-slate-400 shadow-sm;
+        @apply ml-auto flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-500 shadow-sm;
     }
 
     .edt-range {
@@ -319,6 +335,10 @@
 
     .edt-event {
         @apply absolute left-2 right-2 overflow-hidden rounded-lg border px-3 py-2 text-white shadow-sm transition hover:shadow-md;
+    }
+
+    .edt-event-actionable {
+        @apply pb-8;
     }
 
     .edt-event-violet {
