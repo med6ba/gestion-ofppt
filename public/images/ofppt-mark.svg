@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 72" role="img" aria-label="OFPPT">
+  <g fill="none" stroke-linecap="square" stroke-linejoin="miter" stroke-width="8">
+    <path d="M8 36 32 12 56 36 32 60Z" stroke="#00a64f"/>
+    <path d="M36 36 60 12 84 36 60 60Z" stroke="#c9d2d8"/>
+    <path d="M64 36 88 12 112 36 88 60Z" stroke="#1489cc"/>
+  </g>
+</svg>

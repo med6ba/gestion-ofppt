@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Approval pending - Smart Campus OFPPT</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="min-h-screen bg-slate-50">
+    <main class="flex min-h-screen items-center justify-center px-4">
+        <div class="max-w-md sc-card p-6 text-center">
+            <img class="mx-auto h-14 w-44 object-contain" src="{{ asset('images/ofppt-logo.svg') }}" alt="OFPPT logo">
+            <div class="mt-3 text-xl font-bold text-campus-700">Smart Campus OFPPT</div>
+            <h1 class="mt-6 text-2xl font-bold">Your account is waiting for approval.</h1>
+            <p class="mt-3 text-sm text-slate-500">A Directeur or Surveillant General must approve your stagiaire registration before you can access the app.</p>
+            <a href="{{ route('login') }}" class="sc-btn sc-btn-primary mt-6">Back to login</a>
+        </div>
+    </main>
+</body>
+</html>

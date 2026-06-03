@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 310 96" role="img" aria-label="OFPPT">
+  <g transform="translate(0 12)" fill="none" stroke-linecap="square" stroke-linejoin="miter" stroke-width="8">
+    <path d="M8 36 32 12 56 36 32 60Z" stroke="#00c765"/>
+    <path d="M36 36 60 12 84 36 60 60Z" stroke="#d7e0e6"/>
+    <path d="M64 36 88 12 112 36 88 60Z" stroke="#38a8f0"/>
+  </g>
+  <text x="126" y="66" fill="#ffffff" font-family="Georgia, 'Times New Roman', serif" font-size="42" font-weight="700" letter-spacing="1">OFPPT</text>
+</svg>
