@@ -10,19 +10,7 @@ class EnsureLocalHost
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (! app()->environment(['local', 'testing'])) {
-            return $next($request);
-        }
-
-        $allowedHosts = array_filter(array_map(
-            fn (string $host): string => $this->normalizeHost($host),
-            explode(',', (string) env('APP_LOCAL_HOSTS', 'localhost,127.0.0.1,::1'))
-        ));
-
-        if ($allowedHosts !== [] && ! in_array($this->normalizeHost($request->getHost()), $allowedHosts, true)) {
-            abort(404);
-        }
-
+        // Allow all local hosts for easier mobile testing
         return $next($request);
     }
 

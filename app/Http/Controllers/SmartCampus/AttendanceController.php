@@ -71,7 +71,7 @@ class AttendanceController extends Controller
                 continue;
             }
 
-            Attendance::updateOrCreate(
+            $attendance = Attendance::updateOrCreate(
                 ['timetable_session_id' => $session->id, 'stagiaire_id' => $studentId],
                 [
                     'status' => $status,
@@ -80,6 +80,9 @@ class AttendanceController extends Controller
                     'marked_at' => now(),
                 ]
             );
+
+            // Dispatch WebSocket event
+            \App\Events\AttendanceMarked::dispatch($session->id, (int) $studentId, $status);
 
             if ($student = User::find($studentId)) {
                 $riskScores->updateFor($student);
@@ -93,6 +96,9 @@ class AttendanceController extends Controller
     {
         $this->authorize('markAttendance', $session);
 
+        // Delete any existing QR session for this timetable session
+        QrAttendanceSession::where('timetable_session_id', $session->id)->delete();
+
         $qr = QrAttendanceSession::create([
             'timetable_session_id' => $session->id,
             'group_id' => $session->group_id,
@@ -102,7 +108,49 @@ class AttendanceController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        return back()->with('status', "QR/code generated. Code: {$qr->short_code}");
+        return back()->with('status', "QR attendance started.");
+    }
+
+    public function refreshQr(TimetableSession $session)
+    {
+        $this->authorize('markAttendance', $session);
+
+        $qr = $session->activeQrSession;
+        if (!$qr) {
+            return response()->json(['error' => 'No active QR session'], 404);
+        }
+
+        // Regenerate token to prevent sharing
+        $qr->update([
+            'secure_token' => Str::random(64),
+            // Optionally refresh expiration time: 'expires_at' => now()->addMinutes(config('smartcampus.qr_expires_minutes')),
+        ]);
+
+        $qrDataUri = (new QRCode())->render(route('attendance.scan', $qr->secure_token));
+
+        $markedStudentIds = $session->attendances()->pluck('stagiaire_id')->toArray();
+        $attendances = Attendance::where('timetable_session_id', $session->id)->get(['stagiaire_id', 'status']);
+        $attempts = AttendanceAttempt::where('timetable_session_id', $session->id)
+            ->where('reason', 'device_already_used')
+            ->whereNotIn('stagiaire_id', $markedStudentIds)
+            ->with('stagiaire:id,name')
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'qrDataUri' => $qrDataUri,
+            'attendances' => $attendances,
+            'attempts' => $attempts,
+        ]);
+    }
+
+    public function stopQr(TimetableSession $session): RedirectResponse
+    {
+        $this->authorize('markAttendance', $session);
+
+        QrAttendanceSession::where('timetable_session_id', $session->id)->delete();
+
+        return back()->with('status', 'QR attendance stopped.');
     }
 
     public function checkIn(): View
@@ -112,7 +160,11 @@ class AttendanceController extends Controller
 
     public function scan(string $token, Request $request, AttendanceSecurityService $security, RiskScoreService $riskScores): RedirectResponse
     {
-        $qr = QrAttendanceSession::where('secure_token', $token)->firstOrFail();
+        $qr = QrAttendanceSession::where('secure_token', $token)->first();
+
+        if (!$qr) {
+            return redirect()->route('login')->withErrors(['email' => 'Le QR code a expiré (il change toutes les 5 secondes). Veuillez scanner le nouveau code affiché à l\'écran.']);
+        }
 
         return $this->attemptCheckIn($qr, 'qr', $request, $security, $riskScores);
     }
@@ -164,35 +216,64 @@ class AttendanceController extends Controller
             return redirect()->route('attendance.check-in')->withErrors(['code' => 'This attendance session is not for your group.']);
         }
 
-        if (!$security->isAllowedIp($request->ip())) {
-            $this->recordAttempt($user, $session, $request, 'ip_not_allowed');
-            $this->notifyAdminsOfSuspiciousAttempt($user, $session);
+        $deviceToken = $request->cookie('device_token');
+
+        if (!$deviceToken) {
+            $deviceToken = Str::uuid()->toString();
+            cookie()->queue('device_token', $deviceToken, 60 * 24 * 365 * 10); // 10 years
+        }
+
+        if (empty($user->device_id)) {
+            // Vérifier si cet appareil est déjà utilisé par un autre étudiant
+            $deviceAlreadyUsed = User::where('device_id', $deviceToken)
+                ->where('id', '!=', $user->id)
+                ->exists();
+
+            if ($deviceAlreadyUsed) {
+                $attempt = $this->recordAttempt($user, $session, $request, 'device_already_used');
+                $this->notifyAdminsOfSuspiciousAttempt($user, $session, 'wrong_device');
+                $riskScores->updateFor($user);
+
+                // Dispatch WebSocket event
+                \App\Events\DeviceConflictDetected::dispatch($session->id, $attempt->id, $user->name, $user->id);
+
+                return redirect()->route('stagiaire.dashboard')->with('status', 'Votre scan est en attente. Veuillez voir votre formateur pour validation (Conflit d\'appareil).');
+            }
+
+            $user->update(['device_id' => $deviceToken]);
+        } elseif ($user->device_id !== $deviceToken) {
+            $this->recordAttempt($user, $session, $request, 'wrong_device');
+            $this->notifyAdminsOfSuspiciousAttempt($user, $session, 'wrong_device');
             $riskScores->updateFor($user);
 
-            return redirect()->route('attendance.check-in')->withErrors(['code' => 'Attendance rejected: you are outside the allowed campus network.']);
+            return redirect()->route('attendance.check-in')->withErrors(['code' => 'Présence refusée : Vous devez utiliser votre appareil enregistré.']);
         }
 
         if (Attendance::where('timetable_session_id', $session->id)->where('stagiaire_id', $user->id)->exists()) {
             return redirect()->route('attendance.check-in')->withErrors(['code' => 'You already checked in for this session.']);
         }
 
-        Attendance::create([
-            'timetable_session_id' => $session->id,
-            'stagiaire_id' => $user->id,
-            'status' => 'present',
-            'method' => $method,
-            'marked_by' => $user->id,
-            'marked_at' => now(),
-        ]);
+        $session->attendances()->updateOrCreate(
+            ['stagiaire_id' => $user->id],
+            [
+                'status' => 'present',
+                'method' => 'qr',
+                'marked_by' => null,
+                'marked_at' => now(),
+            ]
+        );
+
+        // Dispatch WebSocket event
+        \App\Events\AttendanceMarked::dispatch($session->id, $user->id, 'present');
 
         $riskScores->updateFor($user);
 
-        return redirect()->route('stagiaire.dashboard')->with('status', 'Attendance confirmed.');
+        return redirect()->route('stagiaire.dashboard')->with('status', 'Présence marquée avec succès via QR Code.');
     }
 
-    private function recordAttempt(User $user, TimetableSession $session, Request $request, string $reason): void
+    private function recordAttempt(User $user, TimetableSession $session, Request $request, string $reason): AttendanceAttempt
     {
-        AttendanceAttempt::create([
+        return AttendanceAttempt::create([
             'stagiaire_id' => $user->id,
             'timetable_session_id' => $session->id,
             'ip_address' => $request->ip(),
@@ -202,12 +283,16 @@ class AttendanceController extends Controller
         ]);
     }
 
-    private function notifyAdminsOfSuspiciousAttempt(User $user, TimetableSession $session): void
+    private function notifyAdminsOfSuspiciousAttempt(User $user, TimetableSession $session, string $reason = 'network'): void
     {
+        $message = $reason === 'wrong_device'
+            ? "{$user->name} a tenté de marquer sa présence avec un appareil non autorisé pour {$session->module->name}."
+            : "{$user->name} a tenté de marquer sa présence en dehors du réseau autorisé pour {$session->module->name}.";
+
         User::whereIn('role', [User::ROLE_DIRECTEUR, User::ROLE_SURVEILLANT])->get()
             ->each(fn (User $admin) => $admin->notify(new SmartCampusNotification(
-                'Suspicious attendance attempt',
-                "{$user->name} attempted attendance outside the allowed network for {$session->module->name}.",
+                'Tentative de présence suspecte',
+                $message,
                 route('attendance.reports'),
                 'security'
             )));

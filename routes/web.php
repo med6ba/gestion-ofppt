@@ -57,7 +57,6 @@ Route::middleware(['auth', 'approved'])->group(function () {
 
     Route::middleware('role:surveillant')->group(function () {
         Route::get('/surveillant/timetable', [TimetableController::class, 'index'])->name('timetable.index');
-        Route::post('/surveillant/timetable/active-week', [TimetableController::class, 'activateWeek'])->name('timetable.active-week');
         Route::post('/surveillant/timetable', [TimetableController::class, 'store'])->name('timetable.store');
         Route::get('/surveillant/timetable/{session}/edit', [TimetableController::class, 'edit'])->name('timetable.edit');
         Route::put('/surveillant/timetable/{session}', [TimetableController::class, 'update'])->name('timetable.update');
@@ -75,6 +74,8 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::get('/formateur/attendance/{session}', [AttendanceController::class, 'show'])->name('attendance.show');
         Route::post('/formateur/attendance/{session}/manual', [AttendanceController::class, 'storeManual'])->name('attendance.manual.store');
         Route::post('/formateur/attendance/{session}/qr', [AttendanceController::class, 'generateQr'])->name('attendance.qr.generate');
+        Route::post('/formateur/attendance/{session}/qr/refresh', [AttendanceController::class, 'refreshQr'])->name('attendance.qr.refresh');
+        Route::post('/formateur/attendance/{session}/qr/stop', [AttendanceController::class, 'stopQr'])->name('attendance.qr.stop');
     });
 
     Route::middleware('role:stagiaire')->group(function () {

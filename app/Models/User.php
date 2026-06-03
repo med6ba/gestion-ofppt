@@ -28,7 +28,7 @@ class User extends Authenticatable
         'group_id',
         'approval_status',
         'enabled',
-        'phone',
+        'phone', 'device_id',
         'registration_number',
         'last_login_at',
     ];
