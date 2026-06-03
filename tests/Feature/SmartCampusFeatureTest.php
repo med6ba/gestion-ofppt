@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\Attendance;
+use App\Models\AttendanceAuditLog;
+use App\Models\AttendanceSession;
+use App\Models\QrAttendanceSession;
 use App\Models\Room;
 use App\Models\TimetableSession;
 use App\Models\User;
@@ -155,6 +159,105 @@ test('formateur attendance session shows qr and statistics', function () {
         ->assertOk()
         ->assertSee('QR / code attendance')
         ->assertSee('Attendance rate');
+});
+
+test('qr refresh rotates token without recreating attendance session', function () {
+    $this->seed();
+
+    $formateur = User::where('email', 'formateur@ofppt.test')->first();
+    $session = TimetableSession::where('formateur_id', $formateur->id)
+        ->whereHas('activeAttendanceSession')
+        ->first();
+    $attendanceSession = $session->activeAttendanceSession;
+    $initialStartedAt = $attendanceSession->actual_started_at->toDateTimeString();
+    $initialToken = $session->activeQrSession->secure_token;
+
+    $this->actingAs($formateur)
+        ->post(route('attendance.qr.refresh', $session))
+        ->assertOk()
+        ->assertJsonStructure(['qrDataUri', 'attendances', 'secondsRemaining']);
+
+    expect(AttendanceSession::where('timetable_session_id', $session->id)->count())->toBe(1);
+    expect($attendanceSession->fresh()->actual_started_at->toDateTimeString())->toBe($initialStartedAt);
+    expect($session->activeQrSession()->first()->secure_token)->not->toBe($initialToken);
+});
+
+test('normal late declaration requires formateur validation before finalization', function () {
+    $this->seed();
+
+    $formateur = User::where('email', 'formateur@ofppt.test')->first();
+    $stagiaire = User::where('email', 'stagiaire@ofppt.test')->first();
+    $session = TimetableSession::where('formateur_id', $formateur->id)
+        ->where('group_id', $stagiaire->group_id)
+        ->first();
+    $attendanceSession = AttendanceSession::where('timetable_session_id', $session->id)->first();
+    $attendanceSession->update([
+        'actual_started_at' => now()->subMinutes(12),
+        'status' => 'qr_closed',
+    ]);
+    QrAttendanceSession::where('attendance_session_id', $attendanceSession->id)->delete();
+
+    $this->actingAs($stagiaire)
+        ->post(route('attendance.late.declare'), ['attendance_session_id' => $attendanceSession->id])
+        ->assertRedirect(route('stagiaire.dashboard'));
+
+    $attendance = Attendance::where('attendance_session_id', $attendanceSession->id)
+        ->where('stagiaire_id', $stagiaire->id)
+        ->first();
+    expect($attendance->status)->toBe('late_pending');
+
+    $this->actingAs($formateur)
+        ->post(route('attendance.finalize', $session))
+        ->assertSessionHasErrors('finalize');
+
+    $this->actingAs($formateur)
+        ->post(route('attendance.late.validate', [$session, $attendance]))
+        ->assertRedirect();
+
+    expect($attendance->fresh()->status)->toBe('late_validated');
+    expect(AttendanceAuditLog::where('attendance_id', $attendance->id)->where('new_status', 'late_validated')->exists())->toBeTrue();
+
+    $this->actingAs($formateur)
+        ->post(route('attendance.finalize', $session))
+        ->assertSessionHas('status');
+
+    expect($attendanceSession->fresh()->status)->toBe('closed');
+});
+
+test('severe late declaration is escalated to surveillant general', function () {
+    $this->seed();
+
+    $formateur = User::where('email', 'formateur@ofppt.test')->first();
+    $surveillant = User::where('email', 'surveillant@ofppt.test')->first();
+    $stagiaire = User::where('email', 'ahmed.risk@ofppt.test')->first();
+    $session = TimetableSession::where('formateur_id', $formateur->id)
+        ->where('group_id', $stagiaire->group_id)
+        ->first();
+    $attendanceSession = AttendanceSession::where('timetable_session_id', $session->id)->first();
+    $attendanceSession->update([
+        'actual_started_at' => now()->subMinutes(45),
+        'status' => 'qr_closed',
+    ]);
+    QrAttendanceSession::where('attendance_session_id', $attendanceSession->id)->delete();
+
+    $this->actingAs($stagiaire)
+        ->post(route('attendance.late.declare'), ['attendance_session_id' => $attendanceSession->id])
+        ->assertRedirect(route('stagiaire.dashboard'));
+
+    $attendance = Attendance::where('attendance_session_id', $attendanceSession->id)
+        ->where('stagiaire_id', $stagiaire->id)
+        ->first();
+    expect($attendance->status)->toBe('severe_late_pending');
+
+    $this->actingAs($formateur)
+        ->post(route('attendance.late.validate', [$session, $attendance]))
+        ->assertSessionHasErrors('late');
+
+    $this->actingAs($surveillant)
+        ->post(route('attendance.severe-late.validate', $attendance))
+        ->assertRedirect();
+
+    expect($attendance->fresh()->status)->toBe('severe_late_validated');
 });
 
 test('chat screen shows secure smart campus connect shell', function () {

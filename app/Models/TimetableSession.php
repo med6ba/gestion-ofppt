@@ -62,6 +62,18 @@ class TimetableSession extends Model
         return $this->hasMany(Attendance::class);
     }
 
+    public function attendanceSessions(): HasMany
+    {
+        return $this->hasMany(AttendanceSession::class);
+    }
+
+    public function activeAttendanceSession(): HasOne
+    {
+        return $this->hasOne(AttendanceSession::class)
+            ->where('status', '!=', AttendanceSession::STATUS_CLOSED)
+            ->latestOfMany();
+    }
+
     public function activeQrSession(): HasOne
     {
         return $this->hasOne(QrAttendanceSession::class)->where('expires_at', '>', now())->latestOfMany();

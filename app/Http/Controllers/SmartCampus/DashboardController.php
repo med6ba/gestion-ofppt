@@ -4,13 +4,16 @@ namespace App\Http\Controllers\SmartCampus;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
+use App\Models\AttendanceAuditLog;
 use App\Models\AttendanceAttempt;
 use App\Models\Conversation;
 use App\Models\Group;
 use App\Models\RiskScore;
 use App\Models\Room;
+use App\Models\StudentPresenceProfile;
 use App\Models\TimetableSession;
 use App\Models\User;
+use App\Services\PresenceXpService;
 use App\Services\RiskScoreService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -23,9 +26,10 @@ class DashboardController extends Controller
         return redirect()->route(auth()->user()->dashboardRoute());
     }
 
-    public function directeur(RiskScoreService $riskScoreService): View
+    public function directeur(RiskScoreService $riskScoreService, PresenceXpService $presenceXpService): View
     {
         $riskScoreService->refreshAll();
+        $presenceXpService->refreshAll();
 
         $attendanceStats = $this->attendanceStats();
 
@@ -40,23 +44,32 @@ class DashboardController extends Controller
                 'suspiciousAttempts' => AttendanceAttempt::count(),
             ],
             'riskScores' => RiskScore::with('stagiaire.group')->orderByDesc('score')->take(6)->get(),
+            'topProfiles' => StudentPresenceProfile::with('stagiaire.group')->orderByDesc('xp_points')->take(6)->get(),
+            'auditLogs' => AttendanceAuditLog::with(['stagiaire.group', 'changedBy'])->latest('created_at')->take(6)->get(),
             'suspiciousAttempts' => AttendanceAttempt::with(['stagiaire', 'session.group'])->latest('created_at')->take(6)->get(),
-            'todaySessions' => TimetableSession::with(['group', 'module', 'room', 'formateur'])->forDate(now())->orderBy('starts_at')->take(8)->get(),
+            'todaySessions' => TimetableSession::with(['group', 'module', 'room', 'formateur', 'activeAttendanceSession'])->forDate(now())->orderBy('starts_at')->take(8)->get(),
             'roomOccupancy' => $this->roomOccupancy(),
             'attendanceChart' => $attendanceStats['chart'],
             'mostAbsentStudents' => $this->mostAbsentStudents(6),
         ]);
     }
 
-    public function surveillant(RiskScoreService $riskScoreService): View
+    public function surveillant(RiskScoreService $riskScoreService, PresenceXpService $presenceXpService): View
     {
         $riskScoreService->refreshAll();
+        $presenceXpService->refreshAll();
 
         return view('dashboards.surveillant', [
             'pendingStagiaires' => User::role(User::ROLE_STAGIAIRE)->where('approval_status', 'pending')->count(),
             'riskScores' => RiskScore::with('stagiaire.group')->orderByDesc('score')->take(8)->get(),
+            'topProfiles' => StudentPresenceProfile::with('stagiaire.group')->orderByDesc('xp_points')->take(6)->get(),
+            'severeLateQueue' => Attendance::with(['stagiaire.group', 'session.module', 'session.formateur'])
+                ->where('status', Attendance::STATUS_SEVERE_LATE_PENDING)
+                ->latest('check_in_at')
+                ->take(8)
+                ->get(),
             'suspiciousAttempts' => AttendanceAttempt::with(['stagiaire', 'session.group'])->latest('created_at')->take(6)->get(),
-            'todaySessions' => TimetableSession::with(['group', 'module', 'room', 'formateur'])->forDate(now())->orderBy('starts_at')->get(),
+            'todaySessions' => TimetableSession::with(['group', 'module', 'room', 'formateur', 'activeAttendanceSession'])->forDate(now())->orderBy('starts_at')->get(),
             'roomOccupancy' => $this->roomOccupancy(),
             'attendanceChart' => $this->attendanceStats()['chart'],
             'recentConversations' => Conversation::with('participants')->latest('last_message_at')->take(5)->get(),
@@ -67,7 +80,7 @@ class DashboardController extends Controller
     public function formateur(): View
     {
         $user = auth()->user();
-        $todaySessions = TimetableSession::with(['group', 'module', 'room', 'activeQrSession'])
+        $todaySessions = TimetableSession::with(['group', 'module', 'room', 'activeQrSession', 'activeAttendanceSession'])
             ->where('formateur_id', $user->id)
             ->forDate(now())
             ->orderBy('starts_at')
@@ -78,7 +91,7 @@ class DashboardController extends Controller
             ->get()
             ->map(function (Group $group) use ($user) {
                 $total = Attendance::whereHas('session', fn ($query) => $query->where('formateur_id', $user->id)->where('group_id', $group->id))->count();
-                $absent = Attendance::whereHas('session', fn ($query) => $query->where('formateur_id', $user->id)->where('group_id', $group->id))->where('status', 'absent')->count();
+                $absent = Attendance::whereHas('session', fn ($query) => $query->where('formateur_id', $user->id)->where('group_id', $group->id))->where('status', Attendance::STATUS_ABSENT)->count();
 
                 return [
                     'label' => $group->code,
@@ -91,20 +104,37 @@ class DashboardController extends Controller
             'nextSession' => $todaySessions->firstWhere('starts_at', '>=', now()->format('H:i:s')) ?? $todaySessions->first(),
             'groups' => $user->teachingGroups()->with('filiere')->get(),
             'groupAbsenceRates' => $groupAbsenceRates,
+            'pendingLateCount' => Attendance::whereHas('session', fn ($query) => $query->where('formateur_id', $user->id))
+                ->where('status', Attendance::STATUS_LATE_PENDING)
+                ->count(),
+            'leaderboard' => StudentPresenceProfile::with('stagiaire.group')
+                ->whereHas('stagiaire', fn ($query) => $query->whereIn('group_id', $user->teachingGroups()->pluck('groups.id')))
+                ->orderByDesc('xp_points')
+                ->take(5)
+                ->get(),
             'unreadMessages' => $this->unreadConversationCount($user),
         ]);
     }
 
-    public function stagiaire(RiskScoreService $riskScoreService): View
+    public function stagiaire(RiskScoreService $riskScoreService, PresenceXpService $presenceXpService): View
     {
         $user = auth()->user();
         $riskScore = $riskScoreService->updateFor($user);
+        $presenceProfile = $presenceXpService->refreshFor($user);
 
-        $todaySessions = TimetableSession::with(['module', 'room', 'formateur'])
+        $todaySessions = TimetableSession::with(['module', 'room', 'formateur', 'activeAttendanceSession'])
             ->where('group_id', $user->group_id)
             ->forDate(now())
             ->orderBy('starts_at')
             ->get();
+
+        $activeLateWindows = $todaySessions
+            ->pluck('activeAttendanceSession')
+            ->filter()
+            ->filter(fn ($attendanceSession) => $attendanceSession->isLateDeclarationOpen())
+            ->reject(fn ($attendanceSession) => Attendance::where('attendance_session_id', $attendanceSession->id)->where('stagiaire_id', $user->id)->exists())
+            ->values();
+        $activeLateWindows->each->load(['timetableSession.module', 'timetableSession.room', 'formateur']);
 
         $tomorrow = now()->copy()->addDay();
 
@@ -116,11 +146,17 @@ class DashboardController extends Controller
                 ->orderBy('starts_at')
                 ->get(),
             'nextSession' => $todaySessions->firstWhere('starts_at', '>=', now()->format('H:i:s')) ?? $todaySessions->first(),
+            'attendanceBySession' => Attendance::where('stagiaire_id', $user->id)
+                ->whereIn('timetable_session_id', $todaySessions->pluck('id'))
+                ->get()
+                ->keyBy('timetable_session_id'),
             'attendanceCounts' => Attendance::where('stagiaire_id', $user->id)
                 ->selectRaw('status, count(*) as total')
                 ->groupBy('status')
                 ->pluck('total', 'status'),
             'riskScore' => $riskScore,
+            'presenceProfile' => $presenceProfile,
+            'activeLateWindows' => $activeLateWindows,
             'unreadMessages' => $this->unreadConversationCount($user),
         ]);
     }
@@ -142,7 +178,7 @@ class DashboardController extends Controller
                 'data' => [
                     (int) $counts->get('present', 0),
                     (int) $counts->get('absent', 0),
-                    (int) $counts->get('late', 0),
+                    collect(Attendance::lateStatuses())->sum(fn (string $status) => (int) $counts->get($status, 0)),
                     (int) $counts->get('justified', 0),
                 ],
             ],
@@ -184,8 +220,8 @@ class DashboardController extends Controller
             ->approved()
             ->with(['group', 'riskScore'])
             ->withCount([
-                'attendances as absences_count' => fn ($query) => $query->where('status', 'absent'),
-                'attendances as late_count' => fn ($query) => $query->where('status', 'late'),
+                'attendances as absences_count' => fn ($query) => $query->where('status', Attendance::STATUS_ABSENT),
+                'attendances as late_count' => fn ($query) => $query->whereIn('status', Attendance::lateStatuses()),
             ])
             ->orderByDesc('absences_count')
             ->orderByDesc('late_count')

@@ -76,6 +76,11 @@ class User extends Authenticatable
         return $this->hasMany(Attendance::class, 'stagiaire_id');
     }
 
+    public function attendanceSessions(): HasMany
+    {
+        return $this->hasMany(AttendanceSession::class, 'formateur_id');
+    }
+
     public function attendanceAttempts(): HasMany
     {
         return $this->hasMany(AttendanceAttempt::class, 'stagiaire_id');
@@ -84,6 +89,11 @@ class User extends Authenticatable
     public function riskScore(): HasOne
     {
         return $this->hasOne(RiskScore::class, 'stagiaire_id');
+    }
+
+    public function presenceProfile(): HasOne
+    {
+        return $this->hasOne(StudentPresenceProfile::class, 'stagiaire_id');
     }
 
     public function conversations(): BelongsToMany

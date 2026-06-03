@@ -1,5 +1,5 @@
 <x-layouts.app title="Formateur Dashboard">
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <div class="sc-card p-5">
             <div class="text-sm font-medium text-slate-500">Today sessions</div>
             <div class="mt-3 text-3xl font-bold">{{ $todaySessions->count() }}</div>
@@ -16,6 +16,10 @@
             <div class="text-sm font-medium text-slate-500">Attendance actions</div>
             <div class="mt-3 text-3xl font-bold">{{ $todaySessions->count() }}</div>
         </a>
+        <a href="{{ route('attendance.index') }}" class="sc-card p-5 hover:bg-slate-50">
+            <div class="text-sm font-medium text-slate-500">Retards a valider</div>
+            <div class="mt-3 text-3xl font-bold">{{ $pendingLateCount }}</div>
+        </a>
     </div>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_360px]">
@@ -31,7 +35,11 @@
                             <div class="font-semibold">{{ $session->timeLabel() }} - {{ $session->module->name }}</div>
                             <span class="sc-badge bg-campus-50 text-campus-700">{{ $session->group->code }}</span>
                         </div>
-                        <div class="mt-1 text-sm text-slate-500">{{ $session->room->code }}{{ $session->activeQrSession ? ' | QR/code active' : '' }}</div>
+                        <div class="mt-1 text-sm text-slate-500">
+                            {{ $session->room->code }}
+                            {{ $session->activeQrSession ? ' | QR/code active' : '' }}
+                            {{ $session->activeAttendanceSession ? ' | appel '.$session->activeAttendanceSession->status : '' }}
+                        </div>
                     </a>
                 @empty
                     <p class="text-sm text-slate-500">No sessions today.</p>
@@ -56,6 +64,24 @@
     <section class="mt-6 sc-card p-5">
         <h2 class="text-lg font-bold">Absence rate per group</h2>
         <div class="mt-5 h-64"><canvas id="groupAbsenceChart"></canvas></div>
+    </section>
+
+    <section class="mt-6 sc-card p-5">
+        <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-bold">Presence XP group leaders</h2>
+            <a href="{{ route('attendance.leaderboard') }}" class="sc-btn sc-btn-secondary">Open</a>
+        </div>
+        <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            @forelse ($leaderboard as $profile)
+                <div class="rounded-lg border border-slate-200 p-3">
+                    <div class="font-semibold">{{ $profile->stagiaire->name }}</div>
+                    <div class="mt-1 text-xs text-slate-500">{{ $profile->stagiaire->group?->code }} | {{ $profile->rank_level }}</div>
+                    <div class="mt-2 text-xl font-bold text-campus-700">{{ $profile->xp_points }} XP</div>
+                </div>
+            @empty
+                <p class="text-sm text-slate-500">No XP data yet.</p>
+            @endforelse
+        </div>
     </section>
 
     @push('scripts')

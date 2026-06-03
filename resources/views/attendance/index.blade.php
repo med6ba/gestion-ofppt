@@ -8,7 +8,11 @@
                         <div class="font-semibold">{{ $session->timeLabel() }} - {{ $session->module->name }}</div>
                         <span class="sc-badge bg-campus-50 text-campus-700">{{ $session->group->code }}</span>
                     </div>
-                    <div class="mt-1 text-sm text-slate-500">{{ $session->room->code }}{{ $session->activeQrSession ? ' | QR/code active' : '' }}</div>
+                    <div class="mt-1 text-sm text-slate-500">
+                        {{ $session->room->code }}
+                        {{ $session->activeQrSession ? ' | QR/code active' : '' }}
+                        {{ $session->activeAttendanceSession ? ' | appel '.$session->activeAttendanceSession->status : '' }}
+                    </div>
                 </a>
             @empty
                 <p class="text-sm text-slate-500">No sessions today.</p>

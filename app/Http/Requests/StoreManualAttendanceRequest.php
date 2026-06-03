@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Attendance;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreManualAttendanceRequest extends FormRequest
 {
@@ -15,7 +17,7 @@ class StoreManualAttendanceRequest extends FormRequest
     {
         return [
             'attendance' => ['required', 'array'],
-            'attendance.*' => ['required', 'in:present,absent,late,justified'],
+            'attendance.*' => ['required', Rule::in(Attendance::statuses())],
         ];
     }
 }

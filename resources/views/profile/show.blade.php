@@ -1,4 +1,12 @@
 <x-layouts.app title="Profile">
+    @php
+        $statusTone = fn (?string $status) => match ($status) {
+            'present', 'late_validated', 'severe_late_validated', 'justified' => 'bg-emerald-100 text-emerald-700',
+            'absent', 'late_rejected', 'severe_late_rejected' => 'bg-rose-100 text-rose-700',
+            'late_pending', 'severe_late_pending', 'pending' => 'bg-amber-100 text-amber-700',
+            default => 'bg-slate-100 text-slate-700',
+        };
+    @endphp
     <div class="grid gap-6 lg:grid-cols-[360px_1fr]">
         <aside class="sc-card p-5">
             <h2 class="text-xl font-bold">{{ $profile->name }}</h2>
@@ -19,6 +27,13 @@
                         <div class="mt-2 text-xs">{{ implode(' | ', $profile->riskScore->reasons ?? []) }}</div>
                     </div>
                 @endif
+                @if ($profile->isStagiaire() && $profile->presenceProfile)
+                    <div class="rounded-lg bg-campus-50 p-4 text-campus-800">
+                        <div class="text-sm font-semibold">Presence XP</div>
+                        <div class="mt-1 text-3xl font-bold">{{ $profile->presenceProfile->xp_points }}</div>
+                        <div class="mt-2 text-xs">{{ $profile->presenceProfile->rank_level }} | streak {{ $profile->presenceProfile->attendance_streak }}</div>
+                    </div>
+                @endif
             </div>
         </aside>
 
@@ -30,7 +45,7 @@
                         <div class="rounded-lg border border-slate-200 p-3">
                             <div class="flex flex-wrap items-center justify-between gap-2">
                                 <div class="font-semibold">{{ $attendance->session->module->name }}</div>
-                                <span class="sc-badge {{ $attendance->status === 'absent' ? 'bg-rose-100 text-rose-700' : ($attendance->status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700') }}">{{ $attendance->status }}</span>
+                                <span class="sc-badge {{ $statusTone($attendance->status) }}">{{ $attendance->status }}</span>
                             </div>
                             <div class="mt-1 text-sm text-slate-500">{{ $attendance->session->timeLabel() }} | {{ $attendance->method }} | {{ $attendance->marked_at?->format('Y-m-d H:i') }}</div>
                         </div>

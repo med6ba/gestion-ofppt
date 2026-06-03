@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\Conversation;
+use App\Models\Group;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 
 class ChatAccessService
 {
@@ -38,6 +40,54 @@ class ChatAccessService
             ->orderBy('role')
             ->orderBy('name')
             ->get();
+    }
+
+    public function contactSectionsFor(User $user): SupportCollection
+    {
+        $contacts = $this->contactsFor($user);
+
+        if ($user->isFormateur()) {
+            return collect([
+                'Administration' => $contacts->filter(fn (User $contact) => $contact->isDirecteur() || $contact->isSurveillant())->values(),
+                'Stagiaires enseignés' => $contacts->filter(fn (User $contact) => $contact->isStagiaire())->values(),
+            ])->filter(fn ($items) => $items->isNotEmpty());
+        }
+
+        if ($user->isStagiaire()) {
+            return collect([
+                'Mes formateurs' => $contacts->filter(fn (User $contact) => $contact->isFormateur())->values(),
+                'Administration' => $contacts->filter(fn (User $contact) => $contact->isSurveillant())->values(),
+            ])->filter(fn ($items) => $items->isNotEmpty());
+        }
+
+        return $contacts
+            ->groupBy(fn (User $contact) => match ($contact->role) {
+                User::ROLE_DIRECTEUR, User::ROLE_SURVEILLANT => 'Administration',
+                User::ROLE_FORMATEUR => 'Formateurs',
+                User::ROLE_STAGIAIRE => 'Stagiaires',
+                default => 'Autres',
+            });
+    }
+
+    public function teachingGroupsFor(User $user): SupportCollection
+    {
+        if (!$user->isFormateur()) {
+            return collect();
+        }
+
+        return $user->teachingGroups()
+            ->with(['stagiaires' => fn ($query) => $query->approved()->orderBy('name'), 'filiere'])
+            ->orderBy('code')
+            ->get()
+            ->map(function (Group $group) use ($user) {
+                return [
+                    'group' => $group,
+                    'module_id' => $group->pivot->module_id,
+                    'students' => $group->stagiaires
+                        ->filter(fn (User $student) => $this->canMessage($user, $student))
+                        ->values(),
+                ];
+            });
     }
 
     public function canMessage(User $sender, User $receiver): bool

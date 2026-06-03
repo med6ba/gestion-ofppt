@@ -74,8 +74,8 @@ class CampusAiService
 
         if ($user->isStagiaire()) {
             $base['attendance'] = [
-                'absences' => Attendance::where('stagiaire_id', $user->id)->where('status', 'absent')->count(),
-                'late_arrivals' => Attendance::where('stagiaire_id', $user->id)->where('status', 'late')->count(),
+                'absences' => Attendance::where('stagiaire_id', $user->id)->where('status', Attendance::STATUS_ABSENT)->count(),
+                'late_arrivals' => Attendance::where('stagiaire_id', $user->id)->whereIn('status', Attendance::lateStatuses())->count(),
                 'risk' => $user->riskScore?->only(['level', 'score', 'reasons']),
             ];
         }

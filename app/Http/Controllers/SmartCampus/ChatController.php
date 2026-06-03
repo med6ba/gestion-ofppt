@@ -20,6 +20,8 @@ class ChatController extends Controller
     {
         return view('chat.index', [
             'contacts' => $chatAccess->contactsFor(auth()->user()),
+            'contactSections' => $chatAccess->contactSectionsFor(auth()->user()),
+            'teachingGroups' => $chatAccess->teachingGroupsFor(auth()->user()),
             'conversations' => $this->conversationList(),
             'activeConversation' => null,
             'messages' => collect(),
@@ -47,13 +49,15 @@ class ChatController extends Controller
 
         return view('chat.index', [
             'contacts' => $chatAccess->contactsFor(auth()->user()),
+            'contactSections' => $chatAccess->contactSectionsFor(auth()->user()),
+            'teachingGroups' => $chatAccess->teachingGroupsFor(auth()->user()),
             'conversations' => $this->conversationList(),
             'activeConversation' => $conversation->load('participants'),
             'messages' => $conversation->messages()->with('sender')->oldest()->get(),
         ]);
     }
 
-    public function storeMessage(SendMessageRequest $request, Conversation $conversation): RedirectResponse
+    public function storeMessage(SendMessageRequest $request, Conversation $conversation): JsonResponse|RedirectResponse
     {
         $this->authorize('send', $conversation);
 
@@ -69,6 +73,17 @@ class ChatController extends Controller
             ->wherePivot('user_id', $request->user()->id)
             ->updateExistingPivot($request->user()->id, ['last_read_at' => now()]);
 
+        $messageData = [
+            'id' => $message->id,
+            'sender_id' => $message->sender_id,
+            'sender' => $request->user()->name,
+            'body' => $message->body,
+            'is_read' => false,
+            'created_at' => $message->created_at->format('H:i'),
+        ];
+
+        broadcast(new \App\Events\MessageSent($messageData, $conversation->id))->toOthers();
+
         $conversation->participants()
             ->whereKeyNot($request->user()->id)
             ->get()
@@ -78,6 +93,10 @@ class ChatController extends Controller
                 route('chat.show', $conversation),
                 'message'
             )));
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => $messageData]);
+        }
 
         return back();
     }

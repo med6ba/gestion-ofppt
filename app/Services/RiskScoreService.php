@@ -12,19 +12,57 @@ class RiskScoreService
     public function updateFor(User $stagiaire): RiskScore
     {
         $attendanceQuery = Attendance::query()->where('stagiaire_id', $stagiaire->id);
-        $total = (clone $attendanceQuery)->count();
-        $absences = (clone $attendanceQuery)->where('status', 'absent')->count();
-        $late = (clone $attendanceQuery)->where('status', 'late')->count();
+        $attendances = (clone $attendanceQuery)
+            ->with('attendanceSession')
+            ->get();
+        $total = $attendances->count();
+        $absences = $attendances->where('status', Attendance::STATUS_ABSENT)->count();
+        $late = $attendances->whereIn('status', [
+            Attendance::STATUS_LATE_VALIDATED,
+            Attendance::STATUS_LATE_REJECTED,
+            Attendance::STATUS_SEVERE_LATE_VALIDATED,
+            Attendance::STATUS_SEVERE_LATE_REJECTED,
+        ])->count();
         $suspicious = AttendanceAttempt::query()->where('stagiaire_id', $stagiaire->id)->count();
 
-        $presentLike = max($total - $absences, 0);
+        $presentLike = $attendances->whereIn('status', Attendance::acceptedStatuses())->count();
         $attendanceRate = $total > 0 ? round(($presentLike / $total) * 100, 2) : 100;
         $absenceRate = 100 - $attendanceRate;
 
-        $score = min(100, (int) round(($absences * 8) + ($late * 3) + ($suspicious * 10) + ($absenceRate * 0.5)));
+        $riskPoints = 0;
+        $weeklyLateCounts = [];
+
+        foreach ($attendances as $attendance) {
+            $riskPoints += match ($attendance->status) {
+                Attendance::STATUS_ABSENT => 3,
+                Attendance::STATUS_LATE_VALIDATED => 1,
+                Attendance::STATUS_SEVERE_LATE_VALIDATED => 2,
+                Attendance::STATUS_LATE_REJECTED => 2,
+                Attendance::STATUS_SEVERE_LATE_REJECTED => 4,
+                default => 0,
+            };
+
+            if (in_array($attendance->status, [Attendance::STATUS_LATE_VALIDATED, Attendance::STATUS_LATE_REJECTED], true)) {
+                $date = $attendance->attendanceSession?->actual_started_at
+                    ?? $attendance->check_in_at
+                    ?? $attendance->marked_at
+                    ?? $attendance->created_at
+                    ?? now();
+                $weekKey = $date->copy()->startOfWeek()->toDateString();
+                $weeklyLateCounts[$weekKey] = ($weeklyLateCounts[$weekKey] ?? 0) + 1;
+
+                if ($weeklyLateCounts[$weekKey] > 1) {
+                    $riskPoints += 2;
+                }
+            }
+        }
+
+        $riskPoints += $suspicious * 3;
+
+        $score = min(100, $riskPoints);
         $level = match (true) {
-            $score >= 70 => 'High',
-            $score >= 35 => 'Medium',
+            $score >= 18 => 'High',
+            $score >= 8 => 'Medium',
             default => 'Low',
         };
 
@@ -33,10 +71,13 @@ class RiskScoreService
             $reasons[] = "{$absences} absences";
         }
         if ($late > 0) {
-            $reasons[] = "{$late} late arrivals";
+            $reasons[] = "{$late} retards decides";
         }
         if ($suspicious > 0) {
-            $reasons[] = "{$suspicious} suspicious attempts";
+            $reasons[] = "{$suspicious} tentatives suspectes";
+        }
+        if (array_sum(array_map(fn (int $count) => max(0, $count - 1), $weeklyLateCounts)) > 0) {
+            $reasons[] = 'retards repetes dans une meme semaine';
         }
         if ($absenceRate > 0) {
             $reasons[] = round($absenceRate, 1).'% absence rate';

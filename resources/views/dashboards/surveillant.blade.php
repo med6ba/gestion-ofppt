@@ -18,6 +18,44 @@
         </div>
     </div>
 
+    <section class="mt-6 sc-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold">Retards importants a verifier</h2>
+                <p class="text-sm text-slate-500">Le formateur ne peut pas valider ces cas directement.</p>
+            </div>
+            <span class="sc-badge bg-amber-100 text-amber-700">{{ $severeLateQueue->count() }} en attente</span>
+        </div>
+        <div class="mt-4 grid gap-3">
+            @forelse ($severeLateQueue as $attendance)
+                <div class="rounded-lg border border-slate-200 p-4">
+                    <div class="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-start">
+                        <div>
+                            <div class="font-semibold">{{ $attendance->stagiaire->name }}</div>
+                            <div class="mt-1 text-sm text-slate-500">
+                                {{ $attendance->stagiaire->group?->code }} | {{ $attendance->session->module->name }}
+                                | {{ $attendance->session->formateur->name }} | {{ $attendance->delay_minutes }} min
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <form method="POST" action="{{ route('attendance.severe-late.validate', $attendance) }}">
+                                @csrf
+                                <button class="sc-btn border border-emerald-200 bg-emerald-50 text-emerald-700">Validate</button>
+                            </form>
+                            <form method="POST" action="{{ route('attendance.severe-late.reject', $attendance) }}" class="flex gap-2">
+                                @csrf
+                                <input name="rejection_reason" class="sc-input w-44" placeholder="Reason">
+                                <button class="sc-btn border border-rose-200 bg-rose-50 text-rose-700">Reject</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <p class="text-sm text-slate-500">Aucun retard important en attente.</p>
+            @endforelse
+        </div>
+    </section>
+
     <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_380px]">
         <section class="sc-card p-5">
             <div class="flex items-center justify-between gap-3">
@@ -49,6 +87,23 @@
                             <div class="mt-1 text-xs text-slate-500">{{ implode(' | ', $risk->reasons ?? []) }}</div>
                         </a>
                     @endforeach
+                </div>
+            </section>
+
+            <section class="sc-card p-5">
+                <h2 class="text-lg font-bold">Presence XP leaders</h2>
+                <div class="mt-4 space-y-3">
+                    @forelse ($topProfiles as $profile)
+                        <a href="{{ route('profile.show', $profile->stagiaire) }}" class="block rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="font-semibold">{{ $profile->stagiaire->name }}</span>
+                                <span class="sc-badge bg-campus-50 text-campus-700">{{ $profile->xp_points }} XP</span>
+                            </div>
+                            <div class="mt-1 text-xs text-slate-500">{{ $profile->stagiaire->group?->code }} | {{ $profile->rank_level }}</div>
+                        </a>
+                    @empty
+                        <p class="text-sm text-slate-500">No XP data yet.</p>
+                    @endforelse
                 </div>
             </section>
 

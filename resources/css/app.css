@@ -73,14 +73,14 @@
     }
 
     .manar-shell {
-        --sidebar-width: 240px;
+        --sidebar-width: 272px;
         --sidebar-collapsed-width: 64px;
         --header-height: 61px;
         @apply h-screen overflow-hidden;
     }
 
     .manar-sidebar {
-        @apply fixed bottom-0 left-0 top-0 z-40 flex w-[var(--sidebar-width)] -translate-x-full flex-col overflow-y-auto bg-transparent px-2 py-3 transition-all duration-300 md:translate-x-0;
+        @apply fixed bottom-0 left-0 top-0 z-40 flex w-[var(--sidebar-width)] -translate-x-full flex-col overflow-hidden bg-transparent px-2 py-3 transition-all duration-300 lg:translate-x-0;
     }
 
     .manar-sidebar.mobile-open {
@@ -88,20 +88,20 @@
     }
 
     .manar-sidebar.collapsed {
-        @apply md:w-[var(--sidebar-collapsed-width)];
+        @apply lg:w-[var(--sidebar-collapsed-width)];
     }
 
     .manar-sidebar.collapsed .menu-text,
     .manar-sidebar.collapsed .section-title {
-        @apply md:hidden;
+        @apply lg:hidden;
     }
 
     .manar-sidebar.collapsed .menu-item {
-        @apply md:justify-center md:px-2;
+        @apply lg:justify-center lg:px-2;
     }
 
     .manar-sidebar.collapsed .logout-button {
-        @apply md:px-2;
+        @apply lg:px-2;
     }
 
     .manar-sidebar-logo {
@@ -117,7 +117,7 @@
     }
 
     .menu-item {
-        @apply relative mx-1 flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-semibold text-slate-500 outline-none transition hover:bg-primary/10 hover:text-primary;
+        @apply relative mx-1 flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-semibold text-slate-600 outline-none transition hover:bg-primary/10 hover:text-primary;
     }
 
     .menu-item.active {
@@ -133,8 +133,24 @@
         @apply flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-primary shadow-sm ring-1 ring-slate-100 transition;
     }
 
+    .menu-emoji {
+        @apply flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-base shadow-sm ring-1 ring-slate-100 transition;
+    }
+
     .menu-item.active .menu-icon {
         @apply bg-primary text-white ring-primary;
+    }
+
+    .menu-item.active .menu-emoji {
+        @apply bg-primary text-white ring-primary;
+    }
+
+    .submenu-item {
+        @apply flex min-h-9 items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-primary;
+    }
+
+    .submenu-item.active {
+        @apply bg-primary/10 text-primary;
     }
 
     .menu-badge {
@@ -154,23 +170,23 @@
     }
 
     .manar-backdrop {
-        @apply fixed inset-0 z-30 bg-slate-900/30 backdrop-blur-sm md:hidden;
+        @apply fixed inset-0 z-30 bg-slate-900/30 backdrop-blur-sm lg:hidden;
     }
 
     .manar-main {
-        @apply flex h-screen min-w-0 flex-col transition-all duration-300 md:ml-[var(--sidebar-width)];
+        @apply flex h-screen min-w-0 flex-col transition-all duration-300 lg:ml-[var(--sidebar-width)];
     }
 
     .is-sidebar-collapsed .manar-main {
-        @apply md:ml-[var(--sidebar-collapsed-width)];
+        @apply lg:ml-[var(--sidebar-collapsed-width)];
     }
 
     .manar-header {
-        @apply flex h-[var(--header-height)] shrink-0 items-center justify-between gap-4 px-4 md:px-6;
+        @apply flex h-[var(--header-height)] shrink-0 items-center justify-between gap-4 px-4 lg:px-6;
     }
 
     .manar-content {
-        @apply m-2 mt-0 flex-1 overflow-y-auto overflow-x-hidden rounded-xl border border-slate-100 bg-white p-3 pb-24 shadow-sm md:m-3 md:mt-0 md:p-4;
+        @apply m-2 mt-0 flex-1 overflow-y-auto overflow-x-hidden rounded-xl border border-slate-100 bg-white p-3 pb-24 shadow-sm lg:m-3 lg:mt-0 lg:p-4;
     }
 
     .manar-search {
@@ -186,27 +202,27 @@
     }
 
     .menu-toggle {
-        @apply flex size-8 flex-col justify-center space-y-1.5 rounded-full bg-white px-2 text-primary shadow-sm ring-1 ring-slate-100 outline-none;
+        @apply flex size-10 flex-col items-start justify-center space-y-[4px] rounded-full bg-white px-2.5 text-indigo-500 shadow-sm ring-1 ring-slate-100 outline-none transition-all hover:bg-slate-50 hover:shadow-md;
     }
 
     .menu-toggle span {
-        @apply h-[2px] w-5 rounded-full bg-current transition-all duration-200;
+        @apply h-[2.5px] w-[20px] rounded-full bg-current transition-all duration-300;
     }
 
     .menu-toggle span:nth-child(2) {
-        @apply w-3;
+        @apply w-[12px];
     }
 
     .menu-toggle.active span:nth-child(1) {
-        @apply translate-y-[5px] rotate-45;
+        @apply translate-y-[6.5px] rotate-45;
     }
 
     .menu-toggle.active span:nth-child(2) {
-        @apply opacity-0;
+        @apply opacity-0 w-[20px];
     }
 
     .menu-toggle.active span:nth-child(3) {
-        @apply -translate-y-[5px] -rotate-45;
+        @apply -translate-y-[6.5px] -rotate-45;
     }
 
     .scrollbar-sm::-webkit-scrollbar {

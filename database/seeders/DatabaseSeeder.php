@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Attendance;
 use App\Models\AttendanceAttempt;
+use App\Models\AttendanceSession;
 use App\Models\Conversation;
 use App\Models\Filiere;
 use App\Models\Group;
@@ -14,6 +15,7 @@ use App\Models\TimetableSession;
 use App\Models\TrainingModule;
 use App\Models\User;
 use App\Notifications\SmartCampusNotification;
+use App\Services\PresenceXpService;
 use App\Services\RiskScoreService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -200,22 +202,46 @@ class DatabaseSeeder extends Seeder
             'created_by' => $surveillant->id,
         ]);
 
+        $morningAttendanceSession = AttendanceSession::create([
+            'timetable_session_id' => $todayMorning->id,
+            'formateur_id' => $formateur->id,
+            'actual_started_at' => now(),
+            'qr_phase_minutes' => 10,
+            'normal_late_until_minutes' => 30,
+            'severe_late_until_minutes' => 60,
+            'status' => 'open',
+        ]);
+
         QrAttendanceSession::create([
+            'attendance_session_id' => $morningAttendanceSession->id,
             'timetable_session_id' => $todayMorning->id,
             'group_id' => $groupDev->id,
             'secure_token' => Str::random(64),
             'short_code' => 'A7K92',
-            'expires_at' => now()->addMinutes(60),
+            'expires_at' => $morningAttendanceSession->qrClosesAt(),
             'created_by' => $formateur->id,
         ]);
 
+        $afternoonAttendanceSession = AttendanceSession::create([
+            'timetable_session_id' => $todayAfternoon->id,
+            'formateur_id' => $formateur->id,
+            'actual_started_at' => now()->subMinutes(40),
+            'qr_phase_minutes' => 10,
+            'normal_late_until_minutes' => 30,
+            'severe_late_until_minutes' => 60,
+            'status' => 'qr_closed',
+        ]);
+
         Attendance::create([
+            'attendance_session_id' => $afternoonAttendanceSession->id,
             'timetable_session_id' => $todayAfternoon->id,
             'stagiaire_id' => $salma->id,
-            'status' => 'late',
-            'method' => 'manual',
-            'marked_by' => $formateur->id,
-            'marked_at' => now()->subHours(2),
+            'status' => 'severe_late_pending',
+            'method' => 'late_declaration',
+            'marked_by' => null,
+            'marked_at' => now()->subMinutes(5),
+            'check_in_at' => now()->subMinutes(5),
+            'delay_minutes' => 40,
         ]);
 
         for ($i = 1; $i <= 14; $i++) {
@@ -236,19 +262,21 @@ class DatabaseSeeder extends Seeder
             Attendance::create([
                 'timetable_session_id' => $historical->id,
                 'stagiaire_id' => $ahmed->id,
-                'status' => $i <= 12 ? 'absent' : 'late',
+                'status' => $i <= 12 ? 'absent' : 'late_validated',
                 'method' => 'manual',
                 'marked_by' => $formateur->id,
                 'marked_at' => now()->subWeeks($i),
+                'check_in_at' => now()->subWeeks($i),
             ]);
 
             Attendance::create([
                 'timetable_session_id' => $historical->id,
                 'stagiaire_id' => $stagiaire->id,
-                'status' => $i % 6 === 0 ? 'late' : 'present',
+                'status' => $i % 6 === 0 ? 'late_validated' : 'present',
                 'method' => 'manual',
                 'marked_by' => $formateur->id,
                 'marked_at' => now()->subWeeks($i),
+                'check_in_at' => now()->subWeeks($i),
             ]);
         }
 
@@ -262,6 +290,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         app(RiskScoreService::class)->refreshAll();
+        app(PresenceXpService::class)->refreshAll();
 
         $conversation = Conversation::create([
             'type' => 'private',

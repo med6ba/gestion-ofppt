@@ -1,4 +1,12 @@
 <x-layouts.app title="Attendance Reports">
+    @php
+        $statusTone = fn (?string $status) => match ($status) {
+            'present', 'late_validated', 'severe_late_validated', 'justified' => 'bg-emerald-100 text-emerald-700',
+            'absent', 'late_rejected', 'severe_late_rejected' => 'bg-rose-100 text-rose-700',
+            'late_pending', 'severe_late_pending', 'pending' => 'bg-amber-100 text-amber-700',
+            default => 'bg-slate-100 text-slate-700',
+        };
+    @endphp
     <div class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         @foreach ([
             ['label' => 'Attendance rate', 'value' => $attendanceSummary['attendanceRate'].'%', 'tone' => 'text-campus-700 bg-campus-50 border-campus-100'],
@@ -14,6 +22,34 @@
         @endforeach
     </div>
 
+    <section class="mb-6 sc-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold">Late arrival settings</h2>
+                <p class="text-sm text-slate-500">Ces valeurs sont appliquees cote serveur a chaque nouvelle session d'appel.</p>
+            </div>
+            <a href="{{ route('attendance.leaderboard') }}" class="sc-btn sc-btn-secondary">Presence XP</a>
+        </div>
+        <form method="POST" action="{{ route('attendance.settings.update') }}" class="mt-4 grid gap-3 md:grid-cols-4">
+            @csrf
+            <label>
+                <span class="sc-label">QR phase minutes</span>
+                <input name="qr_phase_minutes" type="number" min="1" max="60" value="{{ $attendanceSettings['qr_phase_minutes'] }}" class="sc-input mt-1">
+            </label>
+            <label>
+                <span class="sc-label">Normal late until</span>
+                <input name="normal_late_until_minutes" type="number" min="2" max="180" value="{{ $attendanceSettings['normal_late_until_minutes'] }}" class="sc-input mt-1">
+            </label>
+            <label>
+                <span class="sc-label">Severe late until</span>
+                <input name="severe_late_until_minutes" type="number" min="3" max="240" value="{{ $attendanceSettings['severe_late_until_minutes'] }}" class="sc-input mt-1">
+            </label>
+            <div class="flex items-end">
+                <button class="sc-btn sc-btn-primary w-full">Save settings</button>
+            </div>
+        </form>
+    </section>
+
     <div class="grid gap-6 xl:grid-cols-[1fr_380px]">
         <section class="sc-card p-5">
             <h2 class="text-lg font-bold">Recent attendance</h2>
@@ -22,7 +58,7 @@
                     <div class="rounded-lg border border-slate-200 p-3">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div class="font-semibold">{{ $attendance->stagiaire->name }}</div>
-                            <span class="sc-badge {{ $attendance->status === 'absent' ? 'bg-rose-100 text-rose-700' : ($attendance->status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700') }}">{{ $attendance->status }}</span>
+                            <span class="sc-badge {{ $statusTone($attendance->status) }}">{{ $attendance->status }}</span>
                         </div>
                         <div class="mt-1 text-sm text-slate-500">{{ $attendance->session->module->name }} | {{ $attendance->session->room->code }} | {{ $attendance->method }}</div>
                     </div>
@@ -68,6 +104,37 @@
             </section>
 
             <section class="sc-card p-5">
+                <h2 class="text-lg font-bold">Retards importants</h2>
+                <div class="mt-4 space-y-3">
+                    @forelse ($severeLateQueue as $attendance)
+                        <div class="rounded-lg border border-slate-200 p-3">
+                            <div class="font-semibold">{{ $attendance->stagiaire->name }}</div>
+                            <div class="mt-1 text-xs text-slate-500">{{ $attendance->stagiaire->group?->code }} | {{ $attendance->session->module->name }} | {{ $attendance->delay_minutes }} min</div>
+                        </div>
+                    @empty
+                        <p class="text-sm text-slate-500">Aucun retard important en attente.</p>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="sc-card p-5">
+                <h2 class="text-lg font-bold">Presence XP top</h2>
+                <div class="mt-4 space-y-3">
+                    @forelse ($topProfiles as $profile)
+                        <div class="rounded-lg border border-slate-200 p-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="font-semibold">{{ $profile->stagiaire->name }}</span>
+                                <span class="sc-badge bg-campus-50 text-campus-700">{{ $profile->xp_points }} XP</span>
+                            </div>
+                            <div class="mt-1 text-xs text-slate-500">{{ $profile->stagiaire->group?->code }} | {{ $profile->rank_level }}</div>
+                        </div>
+                    @empty
+                        <p class="text-sm text-slate-500">No XP data yet.</p>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="sc-card p-5">
                 <h2 class="text-lg font-bold">Suspicious attempts</h2>
                 <div class="mt-4 space-y-3">
                     @forelse ($attempts as $attempt)
@@ -82,4 +149,19 @@
             </section>
         </aside>
     </div>
+
+    <section class="mt-6 sc-card p-5">
+        <h2 class="text-lg font-bold">Correction audit logs</h2>
+        <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            @forelse ($auditLogs as $log)
+                <div class="rounded-lg border border-slate-200 p-3">
+                    <div class="font-semibold">{{ $log->stagiaire->name }}</div>
+                    <div class="mt-1 text-xs text-slate-500">{{ $log->old_status ?? 'none' }} -> {{ $log->new_status }} | {{ $log->changedBy->name }}</div>
+                    <div class="mt-1 text-sm text-slate-600">{{ $log->reason }}</div>
+                </div>
+            @empty
+                <p class="text-sm text-slate-500">No audit logs yet.</p>
+            @endforelse
+        </div>
+    </section>
 </x-layouts.app>

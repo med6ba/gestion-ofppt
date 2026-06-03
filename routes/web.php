@@ -49,24 +49,32 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::post('/stagiaires/{user}/approve', [UserManagementController::class, 'approve'])->name('stagiaires.approve');
         Route::post('/stagiaires/{user}/reject', [UserManagementController::class, 'reject'])->name('stagiaires.reject');
         Route::get('/attendance/reports', [AttendanceController::class, 'reports'])->name('attendance.reports');
+        Route::post('/attendance/settings', [AttendanceController::class, 'updateSettings'])->name('attendance.settings.update');
     });
 
     Route::middleware('role:directeur')->group(function () {
         Route::post('/staff', [UserManagementController::class, 'storeStaff'])->name('staff.store');
     });
 
-    Route::middleware('role:surveillant')->group(function () {
+    Route::middleware('role:directeur,surveillant')->group(function () {
         Route::get('/surveillant/timetable', [TimetableController::class, 'index'])->name('timetable.index');
+        Route::get('/surveillant/resources', [ResourceController::class, 'index'])->name('resources.index');
+    });
+
+    Route::middleware('role:surveillant')->group(function () {
+        Route::post('/surveillant/timetable/active-week', [TimetableController::class, 'activateWeek'])->name('timetable.active-week');
         Route::post('/surveillant/timetable', [TimetableController::class, 'store'])->name('timetable.store');
         Route::get('/surveillant/timetable/{session}/edit', [TimetableController::class, 'edit'])->name('timetable.edit');
         Route::put('/surveillant/timetable/{session}', [TimetableController::class, 'update'])->name('timetable.update');
         Route::delete('/surveillant/timetable/{session}', [TimetableController::class, 'destroy'])->name('timetable.destroy');
 
-        Route::get('/surveillant/resources', [ResourceController::class, 'index'])->name('resources.index');
         Route::post('/surveillant/resources/filieres', [ResourceController::class, 'storeFiliere'])->name('resources.filieres.store');
         Route::post('/surveillant/resources/groups', [ResourceController::class, 'storeGroup'])->name('resources.groups.store');
         Route::post('/surveillant/resources/modules', [ResourceController::class, 'storeModule'])->name('resources.modules.store');
         Route::post('/surveillant/resources/rooms', [ResourceController::class, 'storeRoom'])->name('resources.rooms.store');
+
+        Route::post('/surveillant/attendance/severe-late/{attendance}/validate', [AttendanceController::class, 'validateSevereLate'])->name('attendance.severe-late.validate');
+        Route::post('/surveillant/attendance/severe-late/{attendance}/reject', [AttendanceController::class, 'rejectSevereLate'])->name('attendance.severe-late.reject');
     });
 
     Route::middleware('role:formateur')->group(function () {
@@ -76,15 +84,25 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::post('/formateur/attendance/{session}/qr', [AttendanceController::class, 'generateQr'])->name('attendance.qr.generate');
         Route::post('/formateur/attendance/{session}/qr/refresh', [AttendanceController::class, 'refreshQr'])->name('attendance.qr.refresh');
         Route::post('/formateur/attendance/{session}/qr/stop', [AttendanceController::class, 'stopQr'])->name('attendance.qr.stop');
+        Route::post('/formateur/attendance/{session}/late/{attendance}/validate', [AttendanceController::class, 'validateLate'])->name('attendance.late.validate');
+        Route::post('/formateur/attendance/{session}/late/{attendance}/reject', [AttendanceController::class, 'rejectLate'])->name('attendance.late.reject');
+        Route::post('/formateur/attendance/{session}/late/bulk-validate', [AttendanceController::class, 'bulkValidateLate'])->name('attendance.late.bulk-validate');
+        Route::post('/formateur/attendance/{session}/late/bulk-reject', [AttendanceController::class, 'bulkRejectLate'])->name('attendance.late.bulk-reject');
+        Route::post('/formateur/attendance/{session}/correction', [AttendanceController::class, 'correctQrMistake'])->name('attendance.correction.store');
+        Route::post('/formateur/attendance/{session}/finalize', [AttendanceController::class, 'finalizeSession'])->name('attendance.finalize');
     });
 
     Route::middleware('role:stagiaire')->group(function () {
         Route::get('/attendance/check-in', [AttendanceController::class, 'checkIn'])->name('attendance.check-in');
         Route::get('/attendance/scan/{token}', [AttendanceController::class, 'scan'])->name('attendance.scan');
         Route::post('/attendance/code', [AttendanceController::class, 'storeCode'])->name('attendance.code.store');
+        Route::post('/attendance/late', [AttendanceController::class, 'declareLate'])->name('attendance.late.declare');
     });
 
     Route::get('/timetable', [TimetableController::class, 'mySchedule'])->name('timetable.mine');
+    Route::get('/presence-xp', [AttendanceController::class, 'leaderboard'])->name('attendance.leaderboard');
+    Route::get('/announcements', fn () => view('announcements.index'))->name('announcements.index');
+    Route::get('/settings', fn () => view('settings.index'))->name('settings.index');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
 

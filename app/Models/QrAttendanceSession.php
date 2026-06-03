@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class QrAttendanceSession extends Model
 {
     protected $fillable = [
+        'attendance_session_id',
         'timetable_session_id',
         'group_id',
         'secure_token',
@@ -26,6 +27,11 @@ class QrAttendanceSession extends Model
     public function session(): BelongsTo
     {
         return $this->belongsTo(TimetableSession::class, 'timetable_session_id');
+    }
+
+    public function attendanceSession(): BelongsTo
+    {
+        return $this->belongsTo(AttendanceSession::class);
     }
 
     public function group(): BelongsTo

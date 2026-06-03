@@ -49,6 +49,26 @@
             </section>
 
             <section class="sc-card p-5">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="text-lg font-bold">Presence XP overview</h2>
+                    <a href="{{ route('attendance.leaderboard') }}" class="sc-btn sc-btn-secondary">Open</a>
+                </div>
+                <div class="mt-4 space-y-3">
+                    @forelse ($topProfiles as $profile)
+                        <a href="{{ route('profile.show', $profile->stagiaire) }}" class="block rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="font-semibold">{{ $profile->stagiaire->name }}</span>
+                                <span class="sc-badge bg-campus-50 text-campus-700">{{ $profile->xp_points }} XP</span>
+                            </div>
+                            <div class="mt-1 text-xs text-slate-500">{{ $profile->stagiaire->group?->code }} | {{ $profile->rank_level }}</div>
+                        </a>
+                    @empty
+                        <p class="text-sm text-slate-500">No XP data yet.</p>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="sc-card p-5">
                 <h2 class="text-lg font-bold">Most absent students</h2>
                 <div class="mt-4 space-y-3">
                     @forelse ($mostAbsentStudents as $student)
@@ -95,6 +115,21 @@
             </div>
         </section>
     </div>
+
+    <section class="mt-6 sc-card p-5">
+        <h2 class="text-lg font-bold">Correction audit logs summary</h2>
+        <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            @forelse ($auditLogs as $log)
+                <div class="rounded-lg border border-slate-200 p-3">
+                    <div class="font-semibold">{{ $log->stagiaire->name }}</div>
+                    <div class="mt-1 text-xs text-slate-500">{{ $log->old_status ?? 'none' }} -> {{ $log->new_status }} | {{ $log->changedBy->name }}</div>
+                    <div class="mt-1 text-sm text-slate-600">{{ $log->reason }}</div>
+                </div>
+            @empty
+                <p class="text-sm text-slate-500">No corrections yet.</p>
+            @endforelse
+        </div>
+    </section>
 
     @push('scripts')
         <script>

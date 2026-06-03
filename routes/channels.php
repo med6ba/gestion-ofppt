@@ -14,3 +14,7 @@ Broadcast::channel('attendance.session.{sessionId}', function ($user, $sessionId
     }
     return (int) $user->id === (int) $session->formateur_id;
 });
+
+Broadcast::channel('chat.{conversationId}', function ($user, $conversationId) {
+    return $user->conversations()->where('conversations.id', $conversationId)->exists();
+});
