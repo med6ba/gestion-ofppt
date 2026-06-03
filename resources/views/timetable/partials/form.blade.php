@@ -1,13 +1,14 @@
 @php
     $defaultWeekStart = $selectedWeekStart ?? now()->startOfWeek();
-    $defaultWeekEnd = $selectedWeekEnd ?? now()->endOfWeek();
+    $defaultGroupId = $selectedGroupId ?? null;
+    $defaultDay = min(now()->dayOfWeekIso, 6);
 @endphp
 
 <div>
     <label class="sc-label">Groupe</label>
     <select class="sc-input mt-1" name="group_id" required>
         @foreach ($groups as $group)
-            <option value="{{ $group->id }}" @selected(old('group_id', $session?->group_id) == $group->id)>{{ $group->code }} - {{ $group->name }}</option>
+            <option value="{{ $group->id }}" @selected(old('group_id', $session?->group_id ?? $defaultGroupId) == $group->id)>{{ $group->code }} - {{ $group->name }}</option>
         @endforeach
     </select>
 </div>
@@ -40,23 +41,13 @@
         <label class="sc-label">Jour</label>
         <select class="sc-input mt-1" name="day_of_week" required>
             @foreach ($weekDays as $value => $label)
-                <option value="{{ $value }}" @selected(old('day_of_week', $session?->day_of_week ?? now()->dayOfWeekIso) == $value)>{{ $label }}</option>
+                <option value="{{ $value }}" @selected(old('day_of_week', $session?->day_of_week ?? $defaultDay) == $value)>{{ $label }}</option>
             @endforeach
         </select>
     </div>
     <div>
         <label class="sc-label">Semaine</label>
-        <input class="sc-input mt-1" name="week_number" type="number" min="1" max="53" value="{{ old('week_number', $session?->week_number ?? $defaultWeekStart->weekOfYear) }}">
-    </div>
-</div>
-<div class="grid gap-3 sm:grid-cols-2">
-    <div>
-        <label class="sc-label">Du</label>
         <input class="sc-input mt-1" name="starts_on" type="date" value="{{ old('starts_on', $session?->starts_on?->format('Y-m-d') ?? $defaultWeekStart->format('Y-m-d')) }}" required>
-    </div>
-    <div>
-        <label class="sc-label">Au</label>
-        <input class="sc-input mt-1" name="ends_on" type="date" value="{{ old('ends_on', $session?->ends_on?->format('Y-m-d') ?? $defaultWeekEnd->format('Y-m-d')) }}" required>
     </div>
 </div>
 <div class="grid gap-3 sm:grid-cols-2">

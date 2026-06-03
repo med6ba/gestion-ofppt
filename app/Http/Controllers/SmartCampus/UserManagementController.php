@@ -17,13 +17,17 @@ class UserManagementController extends Controller
 {
     public function index(Request $request): View
     {
+        $viewer = $request->user();
         $role = $request->string('role')->toString();
         $status = $request->string('status')->toString();
         $search = $request->string('search')->toString();
         $validRoles = [User::ROLE_DIRECTEUR, User::ROLE_SURVEILLANT, User::ROLE_FORMATEUR, User::ROLE_STAGIAIRE];
+        $visibleRoles = $viewer->isDirecteur() ? $validRoles : [User::ROLE_STAGIAIRE];
+        $role = in_array($role, $visibleRoles, true) ? $role : ($viewer->isDirecteur() ? '' : User::ROLE_STAGIAIRE);
 
         $users = User::query()
             ->with(['group', 'riskScore'])
+            ->whereIn('role', $visibleRoles)
             ->when(in_array($role, $validRoles, true), fn ($query) => $query->where('role', $role))
             ->when($status && $role === User::ROLE_STAGIAIRE, fn ($query) => $query->where('approval_status', $status))
             ->when($search, function ($query) use ($search) {
@@ -46,11 +50,14 @@ class UserManagementController extends Controller
                 'search' => $search,
             ],
             'roleCounts' => User::query()
+                ->whereIn('role', $visibleRoles)
                 ->selectRaw('role, count(*) as total')
                 ->groupBy('role')
                 ->pluck('total', 'role'),
             'pendingStagiaires' => User::with('group')->role(User::ROLE_STAGIAIRE)->where('approval_status', 'pending')->latest()->get(),
-            'staff' => User::role([User::ROLE_DIRECTEUR, User::ROLE_SURVEILLANT, User::ROLE_FORMATEUR])->orderBy('role')->orderBy('name')->get(),
+            'staff' => $viewer->isDirecteur()
+                ? User::role([User::ROLE_DIRECTEUR, User::ROLE_SURVEILLANT, User::ROLE_FORMATEUR])->orderBy('role')->orderBy('name')->get()
+                : collect(),
             'stagiaires' => User::with(['group', 'riskScore'])->role(User::ROLE_STAGIAIRE)->orderBy('name')->get(),
             'groups' => Group::orderBy('code')->get(),
         ]);

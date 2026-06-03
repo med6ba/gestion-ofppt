@@ -143,8 +143,9 @@ class DatabaseSeeder extends Seeder
         $secondFormateur->teachingModules()->attach([$network->id]);
 
         $weekStart = now()->startOfWeek()->toDateString();
-        $weekEnd = now()->endOfWeek()->toDateString();
-        $today = now()->dayOfWeekIso;
+        $weekEnd = now()->startOfWeek()->addDays(5)->toDateString();
+        $today = min(now()->dayOfWeekIso, 6);
+        $nextTrainingDay = min(6, $today + 1);
 
         $todayMorning = TimetableSession::create([
             'group_id' => $groupDev->id,
@@ -179,7 +180,7 @@ class DatabaseSeeder extends Seeder
             'module_id' => $db->id,
             'formateur_id' => $formateur->id,
             'room_id' => $roomB->id,
-            'day_of_week' => min(7, $today + 1),
+            'day_of_week' => $nextTrainingDay,
             'starts_on' => $weekStart,
             'ends_on' => $weekEnd,
             'week_number' => now()->weekOfYear,
@@ -193,7 +194,7 @@ class DatabaseSeeder extends Seeder
             'module_id' => $network->id,
             'formateur_id' => $secondFormateur->id,
             'room_id' => $lab->id,
-            'day_of_week' => min(7, $today + 1),
+            'day_of_week' => $nextTrainingDay,
             'starts_on' => $weekStart,
             'ends_on' => $weekEnd,
             'week_number' => now()->weekOfYear,
@@ -252,7 +253,7 @@ class DatabaseSeeder extends Seeder
                 'room_id' => $i % 2 ? $lab->id : $roomA->id,
                 'day_of_week' => (($i % 5) + 1),
                 'starts_on' => now()->subWeeks($i)->startOfWeek()->toDateString(),
-                'ends_on' => now()->subWeeks($i)->endOfWeek()->toDateString(),
+                'ends_on' => now()->subWeeks($i)->startOfWeek()->addDays(5)->toDateString(),
                 'week_number' => now()->subWeeks($i)->weekOfYear,
                 'starts_at' => '08:30',
                 'ends_at' => '10:30',

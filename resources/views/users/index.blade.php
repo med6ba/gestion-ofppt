@@ -1,12 +1,15 @@
 <x-layouts.app title="Utilisateurs">
     @php
-        $types = [
+        $allTypes = [
             '' => 'Tous',
             'directeur' => 'Directeur',
             'surveillant' => 'Surveillant Général',
             'formateur' => 'Formateur',
             'stagiaire' => 'Stagiaire',
         ];
+        $types = auth()->user()->isDirecteur()
+            ? $allTypes
+            : ['stagiaire' => 'Stagiaire'];
         $statusOptions = ['' => 'Tous statuts', 'pending' => 'pending', 'approved' => 'approved', 'rejected' => 'rejected'];
         $roleBadge = fn (string $role) => match ($role) {
             'directeur' => 'bg-indigo-100 text-indigo-700',

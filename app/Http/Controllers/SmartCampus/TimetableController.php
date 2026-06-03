@@ -14,21 +14,25 @@ use App\Services\TimetableConflictService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class TimetableController extends Controller
 {
-    private const ACTIVE_WEEK_CACHE_KEY = 'smartcampus.timetable.active_week_start';
-
     public function index(Request $request): View
     {
         $formData = $this->formData();
-        $selectedGroupId = $request->integer('group_id') ?: $formData['groups']->first()?->id;
+        $latestSession = TimetableSession::whereBetween('day_of_week', [1, 6])
+            ->orderByDesc('starts_on')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+        $selectedGroupId = $request->integer('group_id') ?: ($latestSession?->group_id ?? $formData['groups']->first()?->id);
         $selectedGroup = $formData['groups']->firstWhere('id', $selectedGroupId);
-        $activeWeekStart = $this->activeWeekStart();
-        $selectedWeekStart = $this->selectedWeekStart($request, $activeWeekStart);
-        $selectedWeekEnd = $selectedWeekStart->copy()->endOfWeek();
+        $latestWeekStart = $this->latestWeekStart(groupId: $selectedGroupId) ?? now()->startOfWeek();
+        $selectedWeekStart = $this->selectedWeekStart($request, $latestWeekStart);
+        $selectedWeekEnd = $this->workWeekEnd($selectedWeekStart);
+        $weekHistory = $this->weekHistory(groupId: $selectedGroupId);
 
         return view('timetable.index', $formData + [
             'gridSessions' => TimetableSession::with(['group.filiere', 'module', 'room', 'formateur'])
@@ -41,8 +45,10 @@ class TimetableController extends Controller
             'selectedGroupId' => $selectedGroupId,
             'selectedWeekStart' => $selectedWeekStart,
             'selectedWeekEnd' => $selectedWeekEnd,
-            'activeWeekStart' => $activeWeekStart,
-            'isSelectedWeekActive' => $selectedWeekStart->isSameDay($activeWeekStart),
+            'latestWeekStart' => $latestWeekStart,
+            'weekHistory' => $weekHistory,
+            'isSelectedWeekLatest' => $selectedWeekStart->isSameDay($latestWeekStart),
+            'isSelectedWeekActive' => $selectedWeekStart->isSameDay($latestWeekStart),
             'sessions' => TimetableSession::with(['group.filiere', 'module', 'room', 'formateur'])
                 ->forWeek($selectedWeekStart)
                 ->when($selectedGroupId, fn ($query) => $query->where('group_id', $selectedGroupId))
@@ -62,17 +68,15 @@ class TimetableController extends Controller
 
         $weekStart = Carbon::parse($data['week_start'])->startOfWeek();
 
-        Cache::forever(self::ACTIVE_WEEK_CACHE_KEY, $weekStart->toDateString());
-
         return redirect()->route('timetable.index', array_filter([
             'group_id' => $data['group_id'] ?? null,
             'week_start' => $weekStart->toDateString(),
-        ]))->with('status', 'Semaine active mise a jour pour tous les utilisateurs.');
+        ]))->with('status', 'Semaine affichee. Les utilisateurs voient automatiquement la derniere semaine disponible.');
     }
 
     public function store(StoreTimetableSessionRequest $request, TimetableConflictService $conflicts): RedirectResponse
     {
-        $data = $request->validated();
+        $data = $this->normalizedWeekData($request->validated());
         $this->assertFormateur($data['formateur_id']);
 
         if ($message = $conflicts->firstConflict($data)) {
@@ -85,21 +89,24 @@ class TimetableController extends Controller
         ]);
 
         $this->syncTeachingAssignments($session);
-        $this->notifyScheduleChange($session, 'New timetable session', 'A new session has been added to your schedule.');
+        $this->announceNewTimetable($session);
 
-        return redirect()->route('timetable.index', $this->sessionIndexParams($session))->with('status', 'Session created.');
+        return redirect()->route('timetable.index', $this->sessionIndexParams($session))->with('status', 'Seance ajoutee et annonce envoyee par email.');
     }
 
     public function edit(TimetableSession $session): View
     {
         return view('timetable.edit', $this->formData() + [
             'session' => $session->load(['group', 'module', 'room', 'formateur']),
+            'selectedGroupId' => $session->group_id,
+            'selectedWeekStart' => $session->starts_on->copy()->startOfWeek(),
+            'selectedWeekEnd' => $this->workWeekEnd($session->starts_on),
         ]);
     }
 
     public function update(StoreTimetableSessionRequest $request, TimetableSession $session, TimetableConflictService $conflicts): RedirectResponse
     {
-        $data = $request->validated();
+        $data = $this->normalizedWeekData($request->validated());
         $this->assertFormateur($data['formateur_id']);
 
         if ($message = $conflicts->firstConflict($data, $session->id)) {
@@ -108,9 +115,9 @@ class TimetableController extends Controller
 
         $session->update($data + ['status' => 'changed']);
         $this->syncTeachingAssignments($session);
-        $this->notifyScheduleChange($session, 'Timetable updated', $data['change_note'] ?: 'A session in your timetable has changed.');
+        $this->notifyScheduleChange($session, 'Timetable updated', ($data['change_note'] ?? null) ?: 'A session in your timetable has changed.');
 
-        return redirect()->route('timetable.index', $this->sessionIndexParams($session))->with('status', 'Session updated.');
+        return redirect()->route('timetable.index', $this->sessionIndexParams($session))->with('status', 'Seance mise a jour.');
     }
 
     public function destroy(TimetableSession $session): RedirectResponse
@@ -120,17 +127,18 @@ class TimetableController extends Controller
         $this->notifyScheduleChange($session, 'Timetable session removed', 'A session was removed from your timetable.');
         $session->delete();
 
-        return redirect()->route('timetable.index', $redirectParams)->with('status', 'Session deleted.');
+        return redirect()->route('timetable.index', $redirectParams)->with('status', 'Seance supprimee.');
     }
 
-    public function mySchedule(): View
+    public function mySchedule(Request $request): View
     {
         $user = auth()->user();
-        $activeWeekStart = $this->activeWeekStart();
-        $activeWeekEnd = $activeWeekStart->copy()->endOfWeek();
+        $latestWeekStart = $this->latestWeekStart(user: $user) ?? now()->startOfWeek();
+        $selectedWeekStart = $this->selectedWeekStart($request, $latestWeekStart);
+        $selectedWeekEnd = $this->workWeekEnd($selectedWeekStart);
 
         $sessions = TimetableSession::with(['group', 'module', 'room', 'formateur'])
-            ->forWeek($activeWeekStart)
+            ->forWeek($selectedWeekStart)
             ->when($user->isFormateur(), fn ($query) => $query->where('formateur_id', $user->id))
             ->when($user->isStagiaire(), fn ($query) => $query->where('group_id', $user->group_id))
             ->orderBy('day_of_week')
@@ -146,10 +154,13 @@ class TimetableController extends Controller
         return view('timetable.mine', [
             'gridSessions' => $sessions,
             'scheduleLabel' => $scheduleLabel,
-            'selectedWeekStart' => $activeWeekStart,
-            'selectedWeekEnd' => $activeWeekEnd,
-            'activeWeekStart' => $activeWeekStart,
-            'isSelectedWeekActive' => true,
+            'selectedWeekStart' => $selectedWeekStart,
+            'selectedWeekEnd' => $selectedWeekEnd,
+            'latestWeekStart' => $latestWeekStart,
+            'weekHistory' => $this->weekHistory(user: $user),
+            'isSelectedWeekLatest' => $selectedWeekStart->isSameDay($latestWeekStart),
+            'isSelectedWeekActive' => $selectedWeekStart->isSameDay($latestWeekStart),
+            'weekDays' => $this->weekDays(),
         ]);
     }
 
@@ -160,31 +171,20 @@ class TimetableController extends Controller
             'modules' => TrainingModule::orderBy('code')->get(),
             'formateurs' => User::role(User::ROLE_FORMATEUR)->approved()->orderBy('name')->get(),
             'rooms' => Room::orderBy('code')->get(),
-            'weekDays' => [
-                1 => 'Lundi',
-                2 => 'Mardi',
-                3 => 'Mercredi',
-                4 => 'Jeudi',
-                5 => 'Vendredi',
-                6 => 'Samedi',
-                7 => 'Dimanche',
-            ],
+            'weekDays' => $this->weekDays(),
         ];
     }
 
-    private function activeWeekStart(): Carbon
+    private function weekDays(): array
     {
-        $cached = Cache::get(self::ACTIVE_WEEK_CACHE_KEY);
-
-        if ($cached) {
-            try {
-                return Carbon::parse($cached)->startOfWeek();
-            } catch (\Throwable) {
-                Cache::forget(self::ACTIVE_WEEK_CACHE_KEY);
-            }
-        }
-
-        return now()->startOfWeek();
+        return [
+            1 => 'Lundi',
+            2 => 'Mardi',
+            3 => 'Mercredi',
+            4 => 'Jeudi',
+            5 => 'Vendredi',
+            6 => 'Samedi',
+        ];
     }
 
     private function selectedWeekStart(Request $request, Carbon $fallback): Carbon
@@ -198,6 +198,50 @@ class TimetableController extends Controller
         } catch (\Throwable) {
             return $fallback->copy();
         }
+    }
+
+    private function latestWeekStart(?User $user = null, ?int $groupId = null): ?Carbon
+    {
+        $startsOn = $this->visibleTimetableQuery($user, $groupId)
+            ->orderByDesc('starts_on')
+            ->value('starts_on');
+
+        return $startsOn ? Carbon::parse($startsOn)->startOfWeek() : null;
+    }
+
+    private function weekHistory(?User $user = null, ?int $groupId = null): Collection
+    {
+        return $this->visibleTimetableQuery($user, $groupId)
+            ->orderByDesc('starts_on')
+            ->pluck('starts_on')
+            ->map(fn ($startsOn) => Carbon::parse($startsOn)->startOfWeek())
+            ->unique(fn (Carbon $weekStart) => $weekStart->toDateString())
+            ->values();
+    }
+
+    private function visibleTimetableQuery(?User $user = null, ?int $groupId = null)
+    {
+        return TimetableSession::query()
+            ->whereBetween('day_of_week', [1, 6])
+            ->when($groupId, fn ($query) => $query->where('group_id', $groupId))
+            ->when($user?->isFormateur(), fn ($query) => $query->where('formateur_id', $user->id))
+            ->when($user?->isStagiaire(), fn ($query) => $query->where('group_id', $user->group_id));
+    }
+
+    private function normalizedWeekData(array $data): array
+    {
+        $weekStart = Carbon::parse($data['starts_on'])->startOfWeek();
+
+        $data['starts_on'] = $weekStart->toDateString();
+        $data['ends_on'] = $this->workWeekEnd($weekStart)->toDateString();
+        $data['week_number'] = $weekStart->weekOfYear;
+
+        return $data;
+    }
+
+    private function workWeekEnd(Carbon $weekStart): Carbon
+    {
+        return $weekStart->copy()->startOfWeek()->addDays(5);
     }
 
     private function sessionIndexParams(TimetableSession $session): array
@@ -229,5 +273,33 @@ class TimetableController extends Controller
         $session->formateur->notify(new SmartCampusNotification($title, $body, $url, 'schedule'));
         $session->group->stagiaires()->approved()->get()
             ->each(fn (User $stagiaire) => $stagiaire->notify(new SmartCampusNotification($title, $body, $url, 'schedule')));
+    }
+
+    private function announceNewTimetable(TimetableSession $session): void
+    {
+        $session->loadMissing(['group', 'module', 'room', 'formateur']);
+        $weekStart = $session->starts_on->copy()->startOfWeek();
+        $weekEnd = $this->workWeekEnd($weekStart);
+        $adminUrl = route('timetable.index', $this->sessionIndexParams($session));
+        $title = 'Nouvel emploi du temps publie';
+        $body = sprintf(
+            'Un nouvel emploi du temps a ete ajoute pour le groupe %s, semaine %d (%s - %s).',
+            $session->group->code,
+            $weekStart->weekOfYear,
+            $weekStart->format('d/m/Y'),
+            $weekEnd->format('d/m/Y'),
+        );
+
+        User::approved()
+            ->where('enabled', true)
+            ->orderBy('id')
+            ->cursor()
+            ->each(function (User $user) use ($title, $body, $adminUrl) {
+                $url = $user->hasRole([User::ROLE_DIRECTEUR, User::ROLE_SURVEILLANT])
+                    ? $adminUrl
+                    : route('timetable.mine');
+
+                $user->notify(new SmartCampusNotification($title, $body, $url, 'schedule', sendMail: true));
+            });
     }
 }

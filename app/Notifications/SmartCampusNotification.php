@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\DatabaseMessage;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class SmartCampusNotification extends Notification
@@ -15,12 +16,19 @@ class SmartCampusNotification extends Notification
         private string $body,
         private ?string $url = null,
         private string $category = 'info',
+        private bool $sendMail = false,
     ) {
     }
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        $channels = ['database'];
+
+        if ($this->sendMail && filled($notifiable->email ?? null)) {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
     }
 
     public function toDatabase(object $notifiable): DatabaseMessage
@@ -31,5 +39,19 @@ class SmartCampusNotification extends Notification
             'url' => $this->url,
             'category' => $this->category,
         ]);
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        $message = (new MailMessage)
+            ->subject($this->title)
+            ->greeting('Bonjour '.$notifiable->name.',')
+            ->line($this->body);
+
+        if ($this->url) {
+            $message->action('Voir l\'emploi du temps', $this->url);
+        }
+
+        return $message->line('Smart Campus OFPPT');
     }
 }

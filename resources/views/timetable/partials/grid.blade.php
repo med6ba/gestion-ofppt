@@ -7,7 +7,6 @@
         4 => 'JEUDI',
         5 => 'VENDREDI',
         6 => 'SAMEDI',
-        7 => 'DIMANCHE',
     ];
     $startHour = $startHour ?? 6;
     $endHour = $endHour ?? 18;
@@ -28,9 +27,6 @@
         <div class="edt-toolbar-main">
             @isset($groups)
                 <form method="GET" action="{{ route('timetable.index') }}" class="edt-group-select">
-                    @isset($selectedWeekStart)
-                        <input type="hidden" name="week_start" value="{{ $selectedWeekStart->toDateString() }}">
-                    @endisset
                     <span class="edt-dot"></span>
                     <select name="group_id" aria-label="Groupe" onchange="this.form.submit()">
                         @foreach ($groups as $group)
@@ -49,7 +45,7 @@
                 <div class="edt-chip edt-week-chip {{ ($isSelectedWeekActive ?? false) ? 'edt-week-chip-active' : '' }}">
                     <x-ui.icon name="calendar" size="size-4" />
                     <span>Semaine {{ $selectedWeekStart->weekOfYear }}</span>
-                    <span class="edt-week-dates">{{ $selectedWeekStart->format('d/m') }} - {{ ($selectedWeekEnd ?? $selectedWeekStart->copy()->endOfWeek())->format('d/m/Y') }}</span>
+                    <span class="edt-week-dates">{{ $selectedWeekStart->format('d/m') }} - {{ ($selectedWeekEnd ?? $selectedWeekStart->copy()->addDays(5))->format('d/m/Y') }}</span>
                 </div>
             @endisset
         </div>

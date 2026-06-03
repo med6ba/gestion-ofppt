@@ -233,6 +233,35 @@ class AttendanceController extends Controller
         return back()->with('status', 'QR masque. Si des stagiaires ont ete bloques par erreur, utilisez Correction erreur QR avec motif.');
     }
 
+    public function mine(PresenceXpService $presenceXp): View
+    {
+        $user = auth()->user();
+        abort_unless($user->isStagiaire(), 403);
+
+        $profile = $presenceXp->refreshFor($user);
+        $attendances = Attendance::with(['session.module', 'session.room', 'session.formateur'])
+            ->where('stagiaire_id', $user->id)
+            ->latest('marked_at')
+            ->paginate(15);
+
+        $counts = Attendance::where('stagiaire_id', $user->id)
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return view('attendance.mine', [
+            'attendances' => $attendances,
+            'presenceProfile' => $profile,
+            'summary' => [
+                'present' => (int) $counts->get(Attendance::STATUS_PRESENT, 0),
+                'acceptedLate' => (int) $counts->get(Attendance::STATUS_LATE_VALIDATED, 0) + (int) $counts->get(Attendance::STATUS_SEVERE_LATE_VALIDATED, 0),
+                'pendingLate' => (int) $counts->get(Attendance::STATUS_LATE_PENDING, 0) + (int) $counts->get(Attendance::STATUS_SEVERE_LATE_PENDING, 0),
+                'absent' => (int) $counts->get(Attendance::STATUS_ABSENT, 0),
+                'justified' => (int) $counts->get(Attendance::STATUS_JUSTIFIED, 0),
+            ],
+        ]);
+    }
+
     public function checkIn(): View
     {
         return view('attendance.check-in');

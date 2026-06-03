@@ -92,6 +92,10 @@ class TimetableSession extends Model
 
     public function scopeForDate($query, Carbon $date)
     {
+        if ($date->dayOfWeekIso > 6) {
+            return $query->whereRaw('1 = 0');
+        }
+
         return $query
             ->where('day_of_week', $date->dayOfWeekIso)
             ->whereDate('starts_on', '<=', $date->toDateString())
@@ -101,9 +105,10 @@ class TimetableSession extends Model
 
     public function scopeForWeek($query, Carbon $weekStart)
     {
-        $weekEnd = $weekStart->copy()->endOfWeek();
+        $weekEnd = $weekStart->copy()->startOfWeek()->addDays(5);
 
         return $query
+            ->whereBetween('day_of_week', [1, 6])
             ->whereDate('starts_on', '<=', $weekEnd->toDateString())
             ->whereDate('ends_on', '>=', $weekStart->toDateString())
             ->where('status', '!=', 'cancelled');

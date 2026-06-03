@@ -12,6 +12,16 @@
     @endphp
 
     <div x-data="{ addContactOpen: false }">
+        <section class="mb-5 sc-card p-5">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">Smart Campus Connect</h2>
+                    <p class="mt-1 text-sm text-slate-500">Messagerie securisee par role, groupe et relation pedagogique.</p>
+                </div>
+                <span class="sc-badge bg-emerald-50 text-emerald-700">Backend access checks</span>
+            </div>
+        </section>
+
         <div class="grid min-h-[72vh] gap-5 xl:grid-cols-[340px_1fr]">
             <aside class="space-y-5">
                 <section class="sc-card overflow-hidden">
@@ -254,7 +264,9 @@
             @else
                 <div class="flex flex-1 items-center justify-center p-8 text-center">
                     <div class="max-w-md">
-                        <div class="mx-auto flex size-16 items-center justify-center rounded-2xl bg-campus-50 text-3xl">💬</div>
+                        <div class="mx-auto flex size-16 items-center justify-center rounded-2xl bg-campus-50 text-campus-700">
+                            <x-ui.icon name="chat-bubble" size="size-8" />
+                        </div>
                         <h2 class="mt-4 text-xl font-bold">Select a conversation</h2>
                         <p class="mt-2 text-sm text-slate-500">Contacts are filtered by role and group permissions. Announcements stay in their own module.</p>
                     </div>

@@ -3,11 +3,15 @@
 use App\Models\Attendance;
 use App\Models\AttendanceAuditLog;
 use App\Models\AttendanceSession;
+use App\Models\Group;
 use App\Models\QrAttendanceSession;
 use App\Models\Room;
 use App\Models\TimetableSession;
+use App\Models\TrainingModule;
 use App\Models\User;
+use App\Notifications\SmartCampusNotification;
 use App\Services\ChatAccessService;
+use Illuminate\Support\Facades\Notification;
 
 test('local app rejects custom host domains', function () {
     $this->get('http://eve.manar.com:8000/login')
@@ -53,6 +57,74 @@ test('surveillant timetable creation blocks room conflicts', function () {
     ])->assertSessionHasErrors('starts_at');
 });
 
+test('surveillant publishes a weekly group timetable and emails all approved roles', function () {
+    $this->seed();
+    Notification::fake();
+
+    $surveillant = User::where('email', 'surveillant@ofppt.test')->first();
+    $group = Group::where('code', 'DD101')->first();
+    $formateur = User::where('email', 'amina.formateur@ofppt.test')->first();
+    $module = TrainingModule::where('code', 'M-NET')->first();
+    $room = Room::where('code', 'S18')->first();
+    $weekStart = now()->addWeeks(3)->startOfWeek();
+
+    $this->actingAs($surveillant)->post(route('timetable.store'), [
+        'group_id' => $group->id,
+        'module_id' => $module->id,
+        'formateur_id' => $formateur->id,
+        'room_id' => $room->id,
+        'day_of_week' => 6,
+        'starts_on' => $weekStart->copy()->addDay()->toDateString(),
+        'starts_at' => '11:00',
+        'ends_at' => '12:30',
+    ])->assertRedirect(route('timetable.index', [
+        'group_id' => $group->id,
+        'week_start' => $weekStart->toDateString(),
+    ]));
+
+    $created = TimetableSession::where('group_id', $group->id)
+        ->where('formateur_id', $formateur->id)
+        ->whereDate('starts_on', $weekStart->toDateString())
+        ->latest('id')
+        ->first();
+
+    expect($created)->not->toBeNull();
+    expect($created->day_of_week)->toBe(6);
+    expect($created->ends_on->toDateString())->toBe($weekStart->copy()->addDays(5)->toDateString());
+    expect($created->week_number)->toBe($weekStart->weekOfYear);
+    expect($formateur->fresh()->teachingGroups()->where('groups.id', $group->id)->wherePivot('module_id', $module->id)->exists())->toBeTrue();
+
+    User::approved()
+        ->where('enabled', true)
+        ->get()
+        ->each(fn (User $user) => Notification::assertSentTo(
+            $user,
+            SmartCampusNotification::class,
+            fn ($notification, array $channels) => in_array('database', $channels, true) && in_array('mail', $channels, true)
+        ));
+
+    Notification::assertNotSentTo(User::where('email', 'pending@ofppt.test')->first(), SmartCampusNotification::class);
+});
+
+test('surveillant cannot create sunday timetable sessions', function () {
+    $this->seed();
+
+    $surveillant = User::where('email', 'surveillant@ofppt.test')->first();
+    $existing = TimetableSession::first();
+    $weekStart = now()->addWeeks(4)->startOfWeek();
+
+    $this->actingAs($surveillant)->post(route('timetable.store'), [
+        'group_id' => $existing->group_id,
+        'module_id' => $existing->module_id,
+        'formateur_id' => $existing->formateur_id,
+        'room_id' => $existing->room_id,
+        'day_of_week' => 7,
+        'starts_on' => $weekStart->toDateString(),
+        'starts_at' => '08:30',
+        'ends_at' => '10:30',
+    ])->assertSessionHasErrors('day_of_week');
+});
+
 test('timetable pages render weekly grid layout', function () {
     $this->seed();
 
@@ -89,7 +161,7 @@ test('surveillant activates a week visible to all timetable viewers', function (
         'room_id' => $existing->room_id,
         'day_of_week' => 1,
         'starts_on' => $nextWeekStart->toDateString(),
-        'ends_on' => $nextWeekStart->copy()->endOfWeek()->toDateString(),
+        'ends_on' => $nextWeekStart->copy()->addDays(5)->toDateString(),
         'week_number' => $nextWeekStart->weekOfYear,
         'starts_at' => '08:30',
         'ends_at' => '10:30',

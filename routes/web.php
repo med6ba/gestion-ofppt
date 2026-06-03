@@ -10,6 +10,7 @@ use App\Http\Controllers\SmartCampus\ProfileController;
 use App\Http\Controllers\SmartCampus\ResourceController;
 use App\Http\Controllers\SmartCampus\TimetableController;
 use App\Http\Controllers\SmartCampus\UserManagementController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard.redirect') : redirect()->route('login'));
@@ -57,27 +58,30 @@ Route::middleware(['auth', 'approved'])->group(function () {
     });
 
     Route::middleware('role:directeur,surveillant')->group(function () {
-        Route::get('/surveillant/timetable', [TimetableController::class, 'index'])->name('timetable.index');
-        Route::get('/surveillant/resources', [ResourceController::class, 'index'])->name('resources.index');
+        Route::get('/timetable/manage', [TimetableController::class, 'index'])->name('timetable.index');
+        Route::get('/resources', [ResourceController::class, 'index'])->name('resources.index');
+        Route::get('/surveillant/timetable', fn (Request $request) => redirect()->route('timetable.index', $request->query()));
+        Route::get('/surveillant/resources', fn () => redirect()->route('resources.index'));
     });
 
     Route::middleware('role:surveillant')->group(function () {
-        Route::post('/surveillant/timetable/active-week', [TimetableController::class, 'activateWeek'])->name('timetable.active-week');
-        Route::post('/surveillant/timetable', [TimetableController::class, 'store'])->name('timetable.store');
-        Route::get('/surveillant/timetable/{session}/edit', [TimetableController::class, 'edit'])->name('timetable.edit');
-        Route::put('/surveillant/timetable/{session}', [TimetableController::class, 'update'])->name('timetable.update');
-        Route::delete('/surveillant/timetable/{session}', [TimetableController::class, 'destroy'])->name('timetable.destroy');
+        Route::post('/timetable/manage/active-week', [TimetableController::class, 'activateWeek'])->name('timetable.active-week');
+        Route::post('/timetable/manage', [TimetableController::class, 'store'])->name('timetable.store');
+        Route::get('/timetable/manage/{session}/edit', [TimetableController::class, 'edit'])->name('timetable.edit');
+        Route::put('/timetable/manage/{session}', [TimetableController::class, 'update'])->name('timetable.update');
+        Route::delete('/timetable/manage/{session}', [TimetableController::class, 'destroy'])->name('timetable.destroy');
 
-        Route::post('/surveillant/resources/filieres', [ResourceController::class, 'storeFiliere'])->name('resources.filieres.store');
-        Route::post('/surveillant/resources/groups', [ResourceController::class, 'storeGroup'])->name('resources.groups.store');
-        Route::post('/surveillant/resources/modules', [ResourceController::class, 'storeModule'])->name('resources.modules.store');
-        Route::post('/surveillant/resources/rooms', [ResourceController::class, 'storeRoom'])->name('resources.rooms.store');
+        Route::post('/resources/filieres', [ResourceController::class, 'storeFiliere'])->name('resources.filieres.store');
+        Route::post('/resources/groups', [ResourceController::class, 'storeGroup'])->name('resources.groups.store');
+        Route::post('/resources/modules', [ResourceController::class, 'storeModule'])->name('resources.modules.store');
+        Route::post('/resources/rooms', [ResourceController::class, 'storeRoom'])->name('resources.rooms.store');
 
         Route::post('/surveillant/attendance/severe-late/{attendance}/validate', [AttendanceController::class, 'validateSevereLate'])->name('attendance.severe-late.validate');
         Route::post('/surveillant/attendance/severe-late/{attendance}/reject', [AttendanceController::class, 'rejectSevereLate'])->name('attendance.severe-late.reject');
     });
 
     Route::middleware('role:formateur')->group(function () {
+        Route::get('/formateur/teaching', [DashboardController::class, 'formateurTeaching'])->name('formateur.teaching');
         Route::get('/formateur/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::get('/formateur/attendance/{session}', [AttendanceController::class, 'show'])->name('attendance.show');
         Route::post('/formateur/attendance/{session}/manual', [AttendanceController::class, 'storeManual'])->name('attendance.manual.store');
@@ -93,6 +97,8 @@ Route::middleware(['auth', 'approved'])->group(function () {
     });
 
     Route::middleware('role:stagiaire')->group(function () {
+        Route::get('/stagiaire/modules', [DashboardController::class, 'stagiaireModules'])->name('stagiaire.modules');
+        Route::get('/attendance/me', [AttendanceController::class, 'mine'])->name('attendance.mine');
         Route::get('/attendance/check-in', [AttendanceController::class, 'checkIn'])->name('attendance.check-in');
         Route::get('/attendance/scan/{token}', [AttendanceController::class, 'scan'])->name('attendance.scan');
         Route::post('/attendance/code', [AttendanceController::class, 'storeCode'])->name('attendance.code.store');

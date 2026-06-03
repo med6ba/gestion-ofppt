@@ -1,4 +1,8 @@
 <x-layouts.app title="Emploi du Temps">
+    @php
+        $canManageTimetable = auth()->user()->isSurveillant();
+    @endphp
+
     @include('timetable.partials.grid', [
         'sessions' => $gridSessions,
         'scheduleLabel' => $scheduleLabel,
@@ -7,7 +11,7 @@
         'selectedWeekStart' => $selectedWeekStart,
         'selectedWeekEnd' => $selectedWeekEnd,
         'isSelectedWeekActive' => $isSelectedWeekActive,
-        'showActions' => true,
+        'showActions' => $canManageTimetable,
         'days' => $weekDays,
     ])
 
@@ -17,12 +21,11 @@
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <h2 class="text-lg font-bold">Semaine de travail</h2>
-                        <p class="mt-1 text-sm text-slate-500">La semaine active est visible par tous les utilisateurs.</p>
                     </div>
-                    @if ($isSelectedWeekActive)
-                        <span class="sc-badge bg-emerald-50 text-emerald-700">Active</span>
+                    @if ($isSelectedWeekLatest)
+                        <span class="sc-badge bg-emerald-50 text-emerald-700">Derniere semaine</span>
                     @else
-                        <span class="sc-badge bg-slate-100 text-slate-600">Brouillon</span>
+                        <span class="sc-badge bg-slate-100 text-slate-600">Historique</span>
                     @endif
                 </div>
 
@@ -35,24 +38,31 @@
                     <button class="sc-btn sc-btn-secondary">Afficher la semaine</button>
                 </form>
 
-                <form method="POST" action="{{ route('timetable.active-week') }}" class="mt-3">
-                    @csrf
-                    <input type="hidden" name="group_id" value="{{ $selectedGroupId }}">
-                    <input type="hidden" name="week_start" value="{{ $selectedWeekStart->toDateString() }}">
-                    <button class="sc-btn sc-btn-primary w-full {{ $isSelectedWeekActive ? 'opacity-70' : '' }}" @disabled($isSelectedWeekActive)>
-                        {{ $isSelectedWeekActive ? 'Deja active pour tous' : 'Activer pour tous' }}
-                    </button>
-                </form>
+                @if ($weekHistory->isNotEmpty())
+                    <form method="GET" action="{{ route('timetable.index') }}" class="mt-3 grid gap-2">
+                        <input type="hidden" name="group_id" value="{{ $selectedGroupId }}">
+                        <label class="sc-label">Historique des semaines</label>
+                        <select class="sc-input" name="week_start" onchange="this.form.submit()">
+                            @foreach ($weekHistory as $historyWeek)
+                                <option value="{{ $historyWeek->toDateString() }}" @selected($selectedWeekStart->isSameDay($historyWeek))>
+                                    Semaine {{ $historyWeek->weekOfYear }} - {{ $historyWeek->format('d/m/Y') }} au {{ $historyWeek->copy()->addDays(5)->format('d/m/Y') }}{{ $loop->first ? ' (derniere)' : '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
+                @endif
             </section>
 
-            <section class="sc-card p-5">
-                <h2 class="text-lg font-bold">Creer une seance</h2>
-                <form method="POST" action="{{ route('timetable.store') }}" class="mt-4 grid gap-3">
-                    @csrf
-                    @include('timetable.partials.form', ['session' => null])
-                    <button class="sc-btn sc-btn-primary">Enregistrer</button>
-                </form>
-            </section>
+            @if ($canManageTimetable)
+                <section class="sc-card p-5">
+                    <h2 class="text-lg font-bold">Ajouter une seance</h2>
+                    <form method="POST" action="{{ route('timetable.store') }}" class="mt-4 grid gap-3">
+                        @csrf
+                        @include('timetable.partials.form', ['session' => null])
+                        <button class="sc-btn sc-btn-primary">Enregistrer</button>
+                    </form>
+                </section>
+            @endif
         </div>
 
         <section class="sc-card p-5">
@@ -67,7 +77,7 @@
                     <div class="rounded-lg border border-slate-200 p-4">
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
-                                <div class="font-semibold">{{ $weekDays[$session->day_of_week] }} {{ $session->timeLabel() }}</div>
+                                <div class="font-semibold">{{ $weekDays[$session->day_of_week] ?? 'Jour '.$session->day_of_week }} {{ $session->timeLabel() }}</div>
                                 <div class="mt-1 text-sm text-slate-500">{{ $session->group->code }} | {{ $session->module->name }} | {{ $session->room->code }} | {{ $session->formateur->name }}</div>
                                 <div class="mt-1 flex flex-wrap gap-2 text-xs text-slate-400">
                                     <span>{{ $session->starts_on->format('Y-m-d') }} au {{ $session->ends_on->format('Y-m-d') }}</span>
@@ -79,14 +89,16 @@
                                     @endif
                                 </div>
                             </div>
-                            <div class="flex gap-2">
-                                <a href="{{ route('timetable.edit', $session) }}" class="sc-btn sc-btn-secondary">Modifier</a>
-                                <form method="POST" action="{{ route('timetable.destroy', $session) }}">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="sc-btn sc-btn-danger">Supprimer</button>
-                                </form>
-                            </div>
+                            @if ($canManageTimetable)
+                                <div class="flex gap-2">
+                                    <a href="{{ route('timetable.edit', $session) }}" class="sc-btn sc-btn-secondary">Modifier</a>
+                                    <form method="POST" action="{{ route('timetable.destroy', $session) }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="sc-btn sc-btn-danger">Supprimer</button>
+                                    </form>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 @empty

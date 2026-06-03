@@ -12,6 +12,7 @@ use App\Models\RiskScore;
 use App\Models\Room;
 use App\Models\StudentPresenceProfile;
 use App\Models\TimetableSession;
+use App\Models\TrainingModule;
 use App\Models\User;
 use App\Services\PresenceXpService;
 use App\Services\RiskScoreService;
@@ -116,6 +117,47 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function formateurTeaching(): View
+    {
+        $user = auth()->user();
+        abort_unless($user->isFormateur(), 403);
+
+        $groups = $user->teachingGroups()
+            ->with([
+                'filiere',
+                'stagiaires' => fn ($query) => $query->approved()->with(['riskScore', 'presenceProfile'])->orderBy('name'),
+            ])
+            ->orderBy('code')
+            ->get();
+
+        $moduleIds = $groups->pluck('pivot.module_id')
+            ->merge($user->timetableSessions()->pluck('module_id'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $students = $groups
+            ->flatMap(fn (Group $group) => $group->stagiaires)
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
+
+        return view('formateur.teaching', [
+            'activeTab' => in_array(request('tab'), ['groups', 'modules', 'students'], true) ? request('tab') : 'groups',
+            'groups' => $groups,
+            'modules' => TrainingModule::query()->whereKey($moduleIds)->orderBy('code')->get(),
+            'students' => $students,
+            'upcomingSessions' => TimetableSession::with(['group', 'module', 'room'])
+                ->where('formateur_id', $user->id)
+                ->whereDate('ends_on', '>=', now()->startOfWeek()->toDateString())
+                ->orderBy('starts_on')
+                ->orderBy('day_of_week')
+                ->orderBy('starts_at')
+                ->take(10)
+                ->get(),
+        ]);
+    }
+
     public function stagiaire(RiskScoreService $riskScoreService, PresenceXpService $presenceXpService): View
     {
         $user = auth()->user();
@@ -158,6 +200,39 @@ class DashboardController extends Controller
             'presenceProfile' => $presenceProfile,
             'activeLateWindows' => $activeLateWindows,
             'unreadMessages' => $this->unreadConversationCount($user),
+        ]);
+    }
+
+    public function stagiaireModules(): View
+    {
+        $user = auth()->user();
+        abort_unless($user->isStagiaire(), 403);
+
+        $sessions = TimetableSession::with(['module', 'formateur', 'room'])
+            ->where('group_id', $user->group_id)
+            ->whereDate('ends_on', '>=', now()->startOfWeek()->toDateString())
+            ->orderBy('starts_on')
+            ->orderBy('day_of_week')
+            ->orderBy('starts_at')
+            ->get();
+
+        $modules = $sessions
+            ->groupBy('module_id')
+            ->map(function (Collection $moduleSessions) {
+                $firstSession = $moduleSessions->first();
+
+                return [
+                    'module' => $firstSession->module,
+                    'sessions' => $moduleSessions,
+                    'formateurs' => $moduleSessions->pluck('formateur')->filter()->unique('id')->values(),
+                    'rooms' => $moduleSessions->pluck('room.code')->filter()->unique()->values(),
+                ];
+            })
+            ->values();
+
+        return view('stagiaire.modules', [
+            'group' => $user->group,
+            'modules' => $modules,
         ]);
     }
 
