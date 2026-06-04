@@ -31,6 +31,7 @@
     }"
     x-modelable="value"
     {{ $attributes->only('x-model') }}
+    {{ $attributes->whereStartsWith('x-on:') }}
     @click.outside="open = false"
     class="relative w-full"
 >

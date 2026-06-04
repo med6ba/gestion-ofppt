@@ -3,16 +3,25 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#009245">
     <title>{{ __('messages.common.register') }} - {{ __('messages.brand') }}</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="{{ asset('logo/ofppt-logo.png') }}" type="image/png">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-50 {{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
+    @php
+        $oldEmailLocalPart = str(old('email_local_part', old('email', '')))->before('@')->toString();
+    @endphp
     <main class="mx-auto flex min-h-screen max-w-xl items-center px-4 py-10">
         <div class="w-full sc-card p-6">
             <div class="flex items-center justify-between gap-4">
-                <img class="h-16 w-16 object-contain drop-shadow-[0_0_18px_rgba(59,130,246,0.35)]" src="{{ asset('logo/ofppt-logo.png') }}" alt="OFPPT logo">
+                <a href="{{ route('landing') }}">
+                    <img class="h-16 w-16 object-contain drop-shadow-[0_0_18px_rgba(59,130,246,0.35)]" src="{{ asset('logo/ofppt-logo.png') }}" alt="OFPPT logo">
+                </a>
                 <div class="flex flex-wrap items-center justify-end gap-2">
                     <x-language-switcher />
+                    <a href="{{ route('landing') }}" class="text-sm font-semibold text-slate-600 hover:text-primary">{{ __('messages.nav.home') }}</a>
                     <a href="{{ route('login') }}" class="text-sm font-semibold text-campus-700">{{ __('messages.common.back_to_login') }}</a>
                 </div>
             </div>
@@ -31,7 +40,10 @@
                 </div>
                 <div>
                     <label class="sc-label">{{ __('messages.common.email') }}</label>
-                    <input class="sc-input mt-1" type="email" name="email" value="{{ old('email') }}" required>
+                    <label class="email-domain-field mt-1" dir="ltr">
+                        <input class="email-domain-input" name="email_local_part" type="text" value="{{ $oldEmailLocalPart }}" placeholder="{{ __('messages.auth.email_placeholder') }}" required autocomplete="username" inputmode="email" dir="ltr">
+                        <span class="email-domain-suffix" dir="ltr">@ofppt-edu.ma</span>
+                    </label>
                 </div>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>

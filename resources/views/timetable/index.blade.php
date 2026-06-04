@@ -152,17 +152,37 @@
                     <h3 class="text-lg font-bold">Créer emploi du temps</h3>
                     <button @click="showCreateTimetableModal = false" class="sc-modal-close"><svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
                 </div>
-                <form @submit.prevent="window.location.href = '?week_start=' + createForm.week_start_date">
+                <form @submit.prevent="submitCreateTimetable">
                     <div class="sc-modal-body space-y-4">
+                        <template x-if="formErrors.length > 0">
+                            <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                                <template x-for="err in formErrors" :key="err"><div x-text="err"></div></template>
+                            </div>
+                        </template>
+                        <div>
+                            <label class="sc-label">Groupe</label>
+                            <x-ui.select
+                                x-model="createForm.group_id"
+                                :alpine-options="Js::from($groups->map(fn($g) => ['id' => $g->id, 'name' => $g->code . ' - ' . $g->name]))"
+                            />
+                        </div>
                         <div>
                             <label class="sc-label">Semaine (Lundi)</label>
                             <input x-model="createForm.week_start_date" type="date" class="sc-input mt-1" required>
                             <p class="mt-2 text-sm text-slate-500">Choisissez la semaine que vous souhaitez préparer. Vous pourrez ensuite ajouter les séances pour chaque classe.</p>
                         </div>
+                        <div>
+                            <label class="sc-label">Titre (optionnel)</label>
+                            <input x-model="createForm.title" type="text" class="sc-input mt-1" placeholder="Ex: Planning principal">
+                        </div>
+                        <div>
+                            <label class="sc-label">Notes (optionnel)</label>
+                            <textarea x-model="createForm.notes" class="sc-input mt-1" rows="2"></textarea>
+                        </div>
                     </div>
                     <div class="sc-modal-footer">
                         <button @click="showCreateTimetableModal = false" type="button" class="sc-btn sc-btn-secondary">Annuler</button>
-                        <button type="submit" class="sc-btn sc-btn-primary">Aller à la semaine</button>
+                        <button type="submit" class="sc-btn sc-btn-primary" :disabled="submitting">Créer</button>
                     </div>
                 </form>
             </div>
@@ -261,12 +281,10 @@
                             </div>
                             <div class="col-span-2 sm:col-span-2">
                                 <label class="sc-label">Horaire (OFPPT - 2h30)</label>
-                                <select @change="sessionForm.starts_at = $event.target.value.split('-')[0]; sessionForm.ends_at = $event.target.value.split('-')[1];" class="sc-input mt-1" required>
-                                    <option value="" disabled selected>— Choisir l'horaire —</option>
-                                    <option value="08:30-11:00">Matin 1 (08:30 - 11:00)</option>
-                                    <option value="11:00-13:30">Matin 2 (11:00 - 13:30)</option>
-                                    <option value="13:30-16:00">Après-midi 1 (13:30 - 16:00)</option>
-                                    <option value="16:00-18:30">Après-midi 2 (16:00 - 18:30)</option>
+                                <select x-model="sessionForm.time_slot" @change="sessionForm.starts_at = $event.target.value.split('-')[0]; sessionForm.ends_at = $event.target.value.split('-')[1];" class="sc-input mt-1" required>
+                                    @foreach ($sessionSlots as $value => $label)
+                                        <option value="{{ $value }}">{{ $label }}</option>
+                                    @endforeach
                                 </select>
                                 <input type="hidden" x-model="sessionForm.starts_at">
                                 <input type="hidden" x-model="sessionForm.ends_at">
@@ -335,12 +353,7 @@
                                 <label class="sc-label">Horaire (OFPPT - 2h30)</label>
                                 <x-ui.select
                                     x-model="editForm.time_slot"
-                                    :alpine-options="Js::from([
-                                        ['id' => '08:30-11:00', 'name' => 'Matin 1 (08:30 - 11:00)'],
-                                        ['id' => '11:00-13:30', 'name' => 'Matin 2 (11:00 - 13:30)'],
-                                        ['id' => '13:30-16:00', 'name' => 'Après-midi 1 (13:30 - 16:00)'],
-                                        ['id' => '16:00-18:30', 'name' => 'Après-midi 2 (16:00 - 18:30)'],
-                                    ])"
+                                    :alpine-options="Js::from(collect($sessionSlots)->map(fn($label, $value) => ['id' => $value, 'name' => $label])->values())"
                                     placeholder="— Choisir l'horaire —"
                                 />
                                 <input type="hidden" x-model="editForm.starts_at">
@@ -486,15 +499,17 @@ document.addEventListener('alpine:init', () => {
         },
 
         openEditSession(id, data) {
+            const startsAt = data.starts_at ? data.starts_at.substring(0, 5) : '';
+            const endsAt = data.ends_at ? data.ends_at.substring(0, 5) : '';
             this.editingSessionId = id;
             this.editForm = {
                 module_id: String(data.module_id),
                 formateur_id: String(data.formateur_id),
                 room_id: String(data.room_id),
                 day_of_week: String(data.day_of_week),
-                time_slot: data.starts_at && data.ends_at ? (data.starts_at.substring(0,5) + '-' + data.ends_at.substring(0,5)) : '',
-                starts_at: data.starts_at,
-                ends_at: data.ends_at,
+                time_slot: startsAt && endsAt ? (startsAt + '-' + endsAt) : '',
+                starts_at: startsAt,
+                ends_at: endsAt,
                 change_note: data.change_note || '',
             };
             this.formErrors = [];

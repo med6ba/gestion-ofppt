@@ -69,19 +69,79 @@
         @apply bg-rose-600 text-white hover:bg-rose-700;
     }
 
+    .language-menu-trigger {
+        @apply inline-flex h-10 max-w-[13rem] items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 text-xs font-black text-slate-600 shadow-sm outline-none transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary focus:ring-2 focus:ring-primary/10;
+    }
+
+    .language-menu-trigger-dark {
+        @apply border-white/20 bg-white/10 text-white shadow-none backdrop-blur hover:border-white/35 hover:bg-white/20 hover:text-white focus:ring-white/20;
+    }
+
+    .language-menu-globe {
+        @apply flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary;
+    }
+
+    .language-menu-trigger-dark .language-menu-globe {
+        @apply bg-white/15 text-white;
+    }
+
+    .language-menu-current {
+        @apply hidden min-w-0 truncate sm:block;
+    }
+
+    .language-menu-code {
+        @apply rounded-full bg-slate-100 px-2 py-1 font-black text-slate-500;
+    }
+
+    .language-menu-trigger-dark .language-menu-code {
+        @apply bg-white/15 text-white;
+    }
+
+    .language-menu-panel {
+        @apply absolute right-0 top-[calc(100%+0.5rem)] z-50 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10;
+    }
+
+    .language-menu-option {
+        @apply flex min-h-10 items-center gap-2 rounded-lg px-2.5 text-sm font-bold text-slate-600 transition hover:bg-primary/5 hover:text-primary;
+    }
+
+    .language-menu-option.active {
+        @apply bg-primary/10 text-primary;
+    }
+
+    .language-menu-option-code {
+        @apply flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[11px] font-black text-slate-500;
+    }
+
+    .language-menu-option.active .language-menu-option-code {
+        @apply bg-primary text-white;
+    }
+
+    .email-domain-field {
+        @apply flex h-12 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm transition focus-within:border-primary focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/10;
+    }
+
+    .email-domain-input {
+        @apply min-w-0 flex-1 bg-transparent px-4 text-sm font-semibold text-slate-800 outline-none placeholder:text-slate-400;
+    }
+
+    .email-domain-suffix {
+        @apply inline-flex shrink-0 items-center border-l border-slate-200 bg-white px-3 text-sm font-black text-primary;
+    }
+
     .sc-badge {
         @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold;
     }
 
     .manar-shell {
-        --sidebar-width: 272px;
-        --sidebar-collapsed-width: 64px;
-        --header-height: 61px;
+        --sidebar-width: 286px;
+        --sidebar-collapsed-width: 78px;
+        --header-height: 70px;
         @apply h-screen overflow-hidden;
     }
 
     .manar-sidebar {
-        @apply fixed bottom-0 left-0 top-0 z-40 flex w-[var(--sidebar-width)] -translate-x-full flex-col overflow-hidden bg-transparent px-2 py-3 transition-all duration-300 lg:translate-x-0;
+        @apply fixed bottom-0 left-0 top-0 z-40 flex w-[var(--sidebar-width)] -translate-x-full flex-col overflow-hidden bg-white/85 px-2.5 py-3 shadow-xl shadow-slate-900/5 backdrop-blur-xl transition-all duration-300 lg:translate-x-0;
     }
 
     .manar-sidebar.mobile-open {
@@ -98,15 +158,23 @@
     }
 
     .manar-sidebar.collapsed .menu-item {
-        @apply lg:justify-center lg:px-2;
+        @apply lg:mx-auto lg:w-12 lg:justify-center lg:px-2;
     }
 
     .manar-sidebar.collapsed .logout-button {
-        @apply lg:px-2;
+        @apply lg:mx-auto lg:w-12 lg:px-2;
+    }
+
+    .manar-sidebar.collapsed .manar-sidebar-logo {
+        @apply lg:justify-center lg:px-0;
+    }
+
+    .manar-sidebar.collapsed .manar-sidebar-logo a {
+        @apply lg:justify-center;
     }
 
     .manar-sidebar-logo {
-        @apply flex h-[64px] shrink-0 items-center px-3;
+        @apply flex h-[64px] shrink-0 items-center rounded-xl px-3;
     }
 
     .manar-menu {
@@ -118,7 +186,7 @@
     }
 
     .menu-item {
-        @apply relative mx-1 flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-semibold text-slate-600 outline-none transition hover:bg-primary/10 hover:text-primary;
+        @apply relative mx-1 flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-semibold text-slate-600 outline-none transition hover:bg-primary/10 hover:text-primary;
     }
 
     .menu-item.active {
@@ -131,7 +199,7 @@
     }
 
     .menu-icon {
-        @apply flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-primary shadow-sm ring-1 ring-slate-100 transition;
+        @apply flex size-8 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm ring-1 ring-slate-100 transition;
     }
 
     .menu-emoji {
@@ -147,7 +215,7 @@
     }
 
     .submenu-item {
-        @apply flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-primary;
+        @apply flex min-h-9 items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-primary;
     }
 
     .submenu-item.active {
@@ -203,7 +271,7 @@
     }
 
     .manar-content {
-        @apply m-2 mt-0 flex-1 overflow-y-auto overflow-x-hidden rounded-xl border border-slate-100 bg-white p-3 pb-24 shadow-sm lg:m-3 lg:mt-0 lg:p-4;
+        @apply m-2 mt-0 flex-1 overflow-y-auto overflow-x-hidden rounded-2xl border border-slate-100 bg-white/95 p-3 pb-24 shadow-sm lg:m-3 lg:mt-0 lg:p-5;
     }
 
     .manar-search {
@@ -211,7 +279,7 @@
     }
 
     .manar-icon-btn {
-        @apply flex size-9 items-center justify-center rounded-full bg-white text-xs font-bold text-slate-500 shadow-sm ring-1 ring-slate-100 transition hover:bg-primary/10 hover:text-primary;
+        @apply flex size-10 items-center justify-center rounded-full bg-white text-xs font-bold text-slate-500 shadow-sm ring-1 ring-slate-100 transition hover:bg-primary/10 hover:text-primary;
     }
 
     .bell-dot {
@@ -304,6 +372,21 @@
         padding-right: 0.75rem;
         margin-left: 0;
         margin-right: 1rem;
+    }
+
+    .rtl .language-menu-panel {
+        left: 0;
+        right: auto;
+    }
+
+    .rtl .email-domain-suffix {
+        border-left: 0;
+        border-right: 1px solid rgb(226 232 240);
+    }
+
+    .rtl .menu-badge {
+        margin-left: 0;
+        margin-right: auto;
     }
 
     .rtl .manar-clock {

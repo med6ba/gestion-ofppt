@@ -35,6 +35,7 @@ class User extends Authenticatable
         'qr_login_token',
         'badge_id',
         'last_login_at',
+        'preferred_locale',
     ];
 
     protected $hidden = [

@@ -15,6 +15,7 @@
     $gridMinWidth = 88 + (count($days) * 190);
     $sessionsByDay = $sessions->groupBy('day_of_week');
     $palette = ['violet', 'teal', 'amber', 'rose', 'blue'];
+    $weekFormAction = $weekFormAction ?? route('timetable.index');
     $toMinutes = function (string $time): int {
         [$hour, $minute] = array_pad(explode(':', substr($time, 0, 5)), 2, 0);
 
@@ -45,7 +46,7 @@
 
             @isset($selectedWeekStart)
                 @if (isset($weekHistory) && $weekHistory->isNotEmpty())
-                    <form method="GET" action="{{ route('timetable.index') }}" class="edt-chip edt-week-chip {{ ($isSelectedWeekActive ?? false) ? 'edt-week-chip-active' : '' }}">
+                    <form method="GET" action="{{ $weekFormAction }}" class="edt-chip edt-week-chip {{ ($isSelectedWeekActive ?? false) ? 'edt-week-chip-active' : '' }}">
                         @if(isset($selectedGroupId))
                             <input type="hidden" name="group_id" value="{{ $selectedGroupId }}">
                         @endif

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\SmartCampus\AbsenceAuthorizationRequestController;
 use App\Http\Controllers\SmartCampus\AiAssistantController;
+use App\Http\Controllers\SmartCampus\AnnouncementController;
 use App\Http\Controllers\SmartCampus\AttestationRequestController;
 use App\Http\Controllers\SmartCampus\AttendanceController;
 use App\Http\Controllers\SmartCampus\AuthController;
@@ -16,7 +17,7 @@ use App\Http\Controllers\SmartCampus\UserManagementController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard.redirect') : view('landing'))->name('landing');
+Route::view('/', 'landing')->name('landing');
 Route::get('/qr-login/{token}', [AuthController::class, 'qrLogin'])->name('auth.qr-login');
 Route::get('/lang/{locale}', function (string $locale, Request $request) {
     abort_unless(in_array($locale, config('app.supported_locales', ['fr', 'ar', 'en']), true), 404);
@@ -24,7 +25,11 @@ Route::get('/lang/{locale}', function (string $locale, Request $request) {
     session(['locale' => $locale]);
     app()->setLocale($locale);
 
-    return redirect()->back();
+    if ($request->user()) {
+        $request->user()->forceFill(['preferred_locale' => $locale])->save();
+    }
+
+    return redirect()->back()->withCookie(cookie()->forever('locale', $locale));
 })->name('lang.switch');
 
 Route::middleware('guest')->group(function () {
@@ -109,6 +114,7 @@ Route::middleware(['auth', 'approved'])->group(function () {
 
     Route::middleware('role:formateur')->group(function () {
         Route::post('/formateur/timetable/sessions/{session}/cancel-request', [TimetableController::class, 'requestCancellation'])->name('timetable.sessions.cancel-request');
+        Route::get('/formateur/absences', [TimetableController::class, 'formateurAbsences'])->name('formateur.absences');
         Route::get('/formateur/teaching', [DashboardController::class, 'formateurTeaching'])->name('formateur.teaching');
         Route::get('/formateur/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::get('/formateur/attendance/{session}', [AttendanceController::class, 'show'])->name('attendance.show');
@@ -143,7 +149,10 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Route::get('/timetable/archive', [TimetableController::class, 'archive'])->name('timetable.archive');
     Route::get('/timetable/sessions/{session}', [TimetableController::class, 'sessionDetails'])->name('timetable.sessions.details');
     Route::get('/presence-xp', [AttendanceController::class, 'leaderboard'])->name('attendance.leaderboard');
-    Route::get('/announcements', fn () => view('announcements.index'))->name('announcements.index');
+    Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+    Route::post('/announcements', [AnnouncementController::class, 'store'])
+        ->middleware('role:directeur,surveillant')
+        ->name('announcements.store');
     Route::get('/settings', fn () => view('settings.index'))->name('settings.index');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');

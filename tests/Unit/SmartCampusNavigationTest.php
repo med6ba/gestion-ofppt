@@ -7,7 +7,7 @@ function navigationLabelsFor(string $role): array
 {
     $user = new User([
         'name' => ucfirst($role),
-        'email' => "{$role}@ofppt.test",
+        'email' => "{$role}@ofppt-edu.ma",
         'role' => $role,
         'approval_status' => 'approved',
     ]);
@@ -42,7 +42,7 @@ test('formateur sidebar exposes teaching and attendance session tools', function
     $labels = navigationLabelsFor(User::ROLE_FORMATEUR);
 
     expect($labels)
-        ->toContain('Mon emploi du temps', 'Mes groupes', 'Mes modules', 'Mes stagiaires', 'Séances', 'Présence XP', 'Chat')
+        ->toContain('Absence formateur', 'Mon emploi du temps', 'Mes groupes', 'Mes modules', 'Mes stagiaires', 'Séances', 'Présence XP', 'Chat')
         ->not->toContain('Utilisateurs', 'Emploi campus', 'Ressources', 'Check-in');
 });
 

@@ -1,5 +1,7 @@
 <x-layouts.app title="Mark Attendance">
     @php
+        use App\Models\AttendanceSession;
+
         $statusLabels = [
             'pending' => 'En attente',
             'present' => 'Present',
@@ -19,10 +21,12 @@
             default => 'bg-slate-100 text-slate-700',
         };
         $qrPhaseOpen = $attendanceSession?->isQrPhaseOpen() ?? false;
-        $qrClosed = $attendanceSession && !$qrPhaseOpen;
+        $attendanceClosed = $attendanceSession?->status === AttendanceSession::STATUS_CLOSED;
+        $qrClosed = $attendanceSession && !$qrPhaseOpen && !$attendanceClosed;
+        $canFinalize = $attendanceSession && !$attendanceClosed && $latePending->isEmpty();
     @endphp
 
-    <div class="grid gap-6 xl:grid-cols-[1fr_380px]">
+    <div x-data="attendanceActions()" class="grid gap-6 xl:grid-cols-[1fr_380px]">
         <section class="sc-card p-5">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -35,6 +39,9 @@
                             | retard normal jusqu'a {{ $attendanceSession->normal_late_until_minutes }} min
                             | retard important jusqu'a {{ $attendanceSession->severe_late_until_minutes }} min
                         </p>
+                        @if ($attendanceClosed)
+                            <span class="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Seance cloturee</span>
+                        @endif
                     @endif
                 </div>
                 <a href="{{ route('attendance.index') }}" class="sc-btn sc-btn-secondary">Back</a>
@@ -89,7 +96,7 @@
                                     </label>
                                     <div class="flex flex-wrap gap-2">
                                         <button type="submit" formaction="{{ route('attendance.late.validate', [$session, $attendance]) }}" class="sc-btn border border-emerald-200 bg-emerald-50 text-emerald-700">Validate</button>
-                                        <button type="submit" formaction="{{ route('attendance.late.reject', [$session, $attendance]) }}" class="sc-btn border border-rose-200 bg-rose-50 text-rose-700">Reject</button>
+                                        <button type="button" @click="openRejectModal('{{ route('attendance.late.reject', [$session, $attendance]) }}', @js($attendance->stagiaire->name))" class="sc-btn border border-rose-200 bg-rose-50 text-rose-700">Reject</button>
                                     </div>
                                 </div>
                             </div>
@@ -119,6 +126,11 @@
 
             <section class="mt-6 rounded-lg border border-slate-200 p-4">
                 <h3 class="font-bold">Presence list</h3>
+                @if ($attendanceClosed)
+                    <div class="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                        Cette seance est cloturee. Les statuts manuels sont verrouilles.
+                    </div>
+                @endif
                 <form method="POST" action="{{ route('attendance.manual.store', $session) }}" class="mt-4">
                     @csrf
                     <div class="grid gap-3">
@@ -141,7 +153,7 @@
                                         <span class="sc-badge {{ $statusTone($record?->status) }}">{{ $record ? $statusLabels[$record->status] : 'Aucun scan' }}</span>
                                         @foreach (['present' => 'Present', 'absent' => 'Absent', 'late_validated' => 'Late', 'justified' => 'Justified'] as $value => $label)
                                             <label class="cursor-pointer">
-                                                <input class="peer sr-only" type="radio" name="attendance[{{ $student->id }}]" value="{{ $value }}" @checked($current === $value)>
+                                                <input class="peer sr-only" type="radio" name="attendance[{{ $student->id }}]" value="{{ $value }}" @checked($current === $value) @disabled($attendanceClosed)>
                                                 <span class="block rounded-lg border border-slate-200 px-3 py-2 text-center text-xs font-semibold peer-checked:border-campus-600 peer-checked:bg-campus-50 peer-checked:text-campus-700">{{ $label }}</span>
                                             </label>
                                         @endforeach
@@ -150,7 +162,9 @@
                             </div>
                         @endforeach
                     </div>
-                    <button class="sc-btn sc-btn-secondary mt-5">Save manual status</button>
+                    <button class="sc-btn sc-btn-secondary mt-5" @disabled($attendanceClosed)>
+                        {{ $attendanceClosed ? 'Seance cloturee' : 'Enregistrer les statuts manuels' }}
+                    </button>
                 </form>
             </section>
         </section>
@@ -159,7 +173,11 @@
             <section class="sc-card p-5">
                 <h2 class="text-lg font-bold">QR / code attendance</h2>
 
-                @if ($qrSession)
+                @if ($attendanceClosed)
+                    <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                        Seance cloturee. Le QR et le code sont verrouilles.
+                    </div>
+                @elseif ($qrSession)
                     <div class="mt-5 rounded-lg bg-slate-50 p-4 text-center" x-data="qrAttendanceData(@js($students->map->only(['id', 'name'])->values()))">
                         <div class="flex flex-col items-center justify-center p-4">
                             <x-ui.icon name="qr" class="mb-2 h-16 w-16 text-slate-400" />
@@ -271,32 +289,47 @@
 
             <section class="sc-card p-5">
                 <h2 class="text-lg font-bold">Correction erreur QR</h2>
+                @if ($attendanceClosed)
+                    <p class="mt-2 text-sm text-slate-500">Les corrections sont verrouillees apres cloture.</p>
+                @endif
                 <form method="POST" action="{{ route('attendance.correction.store', $session) }}" class="mt-4 space-y-3">
                     @csrf
                     <div class="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-3">
                         @foreach ($students as $student)
                             <label class="flex items-center gap-2 text-sm">
-                                <input type="checkbox" name="student_ids[]" value="{{ $student->id }}" class="rounded border-slate-300 text-primary">
+                                <input type="checkbox" name="student_ids[]" value="{{ $student->id }}" class="rounded border-slate-300 text-primary" @disabled($attendanceClosed)>
                                 <span>{{ $student->name }}</span>
                             </label>
                         @endforeach
                     </div>
-                    <select name="correction_type" class="sc-input">
+                    <select name="correction_type" class="sc-input" @disabled($attendanceClosed)>
                         <option value="present">Mark as present</option>
                         <option value="late_validated">Mark as late validated</option>
                     </select>
-                    <textarea name="reason" class="sc-input min-h-24" placeholder="Reason required: QR ferme par erreur, probleme projecteur, probleme connexion..."></textarea>
-                    <button class="sc-btn sc-btn-secondary w-full">Save correction</button>
+                    <textarea name="reason" class="sc-input min-h-24" placeholder="Reason required: QR ferme par erreur, probleme projecteur, probleme connexion..." @disabled($attendanceClosed)></textarea>
+                    <button class="sc-btn sc-btn-secondary w-full" @disabled($attendanceClosed)>Save correction</button>
                 </form>
             </section>
 
             <section class="sc-card p-5">
                 <h2 class="text-lg font-bold">Cloture</h2>
-                <p class="mt-2 text-sm text-slate-500">La cloture est bloquee tant que des retards normaux sont en attente.</p>
-                <form method="POST" action="{{ route('attendance.finalize', $session) }}" class="mt-4">
-                    @csrf
-                    <button class="sc-btn sc-btn-primary w-full">Valider la seance</button>
-                </form>
+                @if ($attendanceClosed)
+                    <p class="mt-2 text-sm text-slate-500">Cette seance est deja cloturee.</p>
+                @elseif (! $attendanceSession)
+                    <p class="mt-2 text-sm text-slate-500">Demarrez l'appel par QR ou enregistrez les statuts manuels avant de cloturer.</p>
+                @elseif ($latePending->isNotEmpty())
+                    <p class="mt-2 text-sm text-amber-700">Validez ou refusez les retards normaux en attente avant la cloture.</p>
+                @else
+                    <p class="mt-2 text-sm text-slate-500">Les stagiaires non marques seront enregistres absents.</p>
+                @endif
+                <button
+                    type="button"
+                    class="sc-btn sc-btn-primary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-60"
+                    @if ($canFinalize) @click="openFinalizeModal('{{ route('attendance.finalize', $session) }}')" @endif
+                    @disabled(! $canFinalize)
+                >
+                    Valider la seance
+                </button>
             </section>
 
             <section class="sc-card p-5">
@@ -314,11 +347,77 @@
                 </div>
             </section>
         </aside>
+        <template x-teleport="body">
+            <div x-show="showRejectModal" x-cloak class="sc-modal-backdrop" @keydown.escape.window="showRejectModal = false">
+                <section class="sc-modal" role="dialog" aria-modal="true" @click.outside="showRejectModal = false">
+                    <div class="sc-modal-header">
+                        <div>
+                            <h3 class="text-lg font-bold text-rose-700">Refuser le retard</h3>
+                            <p class="mt-1 text-sm text-slate-500" x-text="rejectStudentName"></p>
+                        </div>
+                        <button type="button" class="sc-modal-close" @click="showRejectModal = false">
+                            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    <form method="POST" :action="rejectAction">
+                        @csrf
+                        <div class="sc-modal-body">
+                            <label class="sc-label">Raison du refus</label>
+                            <textarea name="rejection_reason" class="sc-input mt-1 min-h-28" required maxlength="500" placeholder="Expliquez la raison pour garder un historique clair."></textarea>
+                        </div>
+                        <div class="sc-modal-footer">
+                            <button type="button" class="sc-btn sc-btn-secondary" @click="showRejectModal = false">Annuler</button>
+                            <button class="sc-btn sc-btn-danger">Refuser</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </template>
+
+        <template x-teleport="body">
+            <div x-show="showFinalizeModal" x-cloak class="sc-modal-backdrop" @keydown.escape.window="showFinalizeModal = false">
+                <section class="sc-modal" role="dialog" aria-modal="true" @click.outside="showFinalizeModal = false">
+                    <div class="sc-modal-header">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900">Cloturer la seance</h3>
+                            <p class="mt-1 text-sm text-slate-500">Les stagiaires non marques seront enregistrés absents. Les retards importants restent dans la file du Surveillant General.</p>
+                        </div>
+                        <button type="button" class="sc-modal-close" @click="showFinalizeModal = false">
+                            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    <form method="POST" :action="finalizeAction">
+                        @csrf
+                        <div class="sc-modal-footer">
+                            <button type="button" class="sc-btn sc-btn-secondary" @click="showFinalizeModal = false">Annuler</button>
+                            <button class="sc-btn sc-btn-primary">Confirmer la cloture</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </template>
     </div>
 
     @push('scripts')
         <script>
             document.addEventListener('alpine:init', () => {
+                Alpine.data('attendanceActions', () => ({
+                    showRejectModal: false,
+                    rejectAction: '',
+                    rejectStudentName: '',
+                    showFinalizeModal: false,
+                    finalizeAction: '',
+                    openRejectModal(action, studentName) {
+                        this.rejectAction = action;
+                        this.rejectStudentName = studentName;
+                        this.showRejectModal = true;
+                    },
+                    openFinalizeModal(action) {
+                        this.finalizeAction = action;
+                        this.showFinalizeModal = true;
+                    },
+                }));
+
                 Alpine.data('qrAttendanceData', (initialStudents = []) => ({
                     showModal: false,
                     showConflictsModal: false,

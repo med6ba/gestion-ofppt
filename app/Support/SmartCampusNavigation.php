@@ -109,7 +109,7 @@ class SmartCampusNavigation
             'users.stagiaires' => self::isUsersStagiairesActive($request),
             'users.pending' => $request->routeIs('stagiaires.*')
                 || ($request->routeIs('users.index') && $request->query('role') === User::ROLE_STAGIAIRE && $request->query('status') === 'pending'),
-            'timetable.manage' => $request->routeIs('timetable.index', 'timetable.edit', 'timetable.store', 'timetable.update', 'timetable.destroy', 'timetable.active-week'),
+            'timetable.manage' => $request->routeIs('timetable.index', 'timetable.weekly.*', 'timetable.sessions.*', 'timetable.cancellations.*'),
             'resources' => $request->routeIs('resources.*'),
             'timetable.mine' => $request->routeIs('timetable.mine'),
             'formateur.groups' => $request->routeIs('formateur.teaching') && $request->query('tab', 'groups') === 'groups',
@@ -119,6 +119,7 @@ class SmartCampusNavigation
             'stagiaire.badge' => $request->routeIs('stagiaire.badge', 'stagiaire.badge.*'),
             'attestations' => $request->routeIs('attestations.*'),
             'absences' => $request->routeIs('absences.*'),
+            'formateur.absences' => $request->routeIs('formateur.absences'),
             'attendance.reports' => $request->routeIs('attendance.reports') && $request->query('focus') !== 'severe-late',
             'attendance.severe-late' => $request->routeIs('attendance.severe-late.*')
                 || ($request->routeIs('attendance.reports') && $request->query('focus') === 'severe-late'),
@@ -140,10 +141,11 @@ class SmartCampusNavigation
     {
         return [
             ['label' => self::label('messages.nav.home'), 'icon' => 'dashboard', 'route' => $user->dashboardRoute(), 'context' => 'dashboard', 'roles' => self::ALL_ROLES, 'mobile' => true, 'mobilePriority' => 10],
-            ['label' => self::label('messages.nav.services'), 'icon' => 'profile', 'roles' => [User::ROLE_DIRECTEUR, User::ROLE_SURVEILLANT, User::ROLE_STAGIAIRE], 'children' => [
+            ['label' => self::label('messages.nav.services'), 'icon' => 'profile', 'roles' => [User::ROLE_DIRECTEUR, User::ROLE_SURVEILLANT, User::ROLE_FORMATEUR, User::ROLE_STAGIAIRE], 'children' => [
                 ['label' => self::label('messages.nav.my_badge'), 'icon' => 'qr', 'route' => 'stagiaire.badge', 'context' => 'stagiaire.badge', 'roles' => [User::ROLE_STAGIAIRE], 'mobile' => true, 'mobilePriority' => 25],
                 ['label' => self::label('messages.nav.attestation'), 'icon' => 'book', 'route' => 'attestations.index', 'context' => 'attestations', 'roles' => [User::ROLE_STAGIAIRE]],
                 ['label' => self::label('messages.nav.absence'), 'icon' => 'calendar', 'route' => 'absences.index', 'context' => 'absences', 'roles' => [User::ROLE_STAGIAIRE]],
+                ['label' => self::label('messages.nav.formateur_absence'), 'icon' => 'calendar', 'route' => 'formateur.absences', 'context' => 'formateur.absences', 'roles' => [User::ROLE_FORMATEUR]],
                 ['label' => self::label('messages.nav.attestation_requests'), 'icon' => 'book', 'route' => 'attestations.manage', 'context' => 'attestations', 'roles' => self::ADMIN_ROLES],
                 ['label' => self::label('messages.nav.absence_requests'), 'icon' => 'calendar', 'route' => 'absences.manage', 'context' => 'absences', 'roles' => self::ADMIN_ROLES],
             ]],

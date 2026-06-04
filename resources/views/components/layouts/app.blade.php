@@ -35,6 +35,7 @@
             sidebarOpen: false,
             sidebarCollapsed: localStorage.getItem('smartCampus.sidebarCollapsed') === 'true' || @js($collapseSidebar),
             openGroups: @js($activeGroups),
+            logoutConfirmOpen: false,
         }"
         x-init="$watch('sidebarCollapsed', value => localStorage.setItem('smartCampus.sidebarCollapsed', value ? 'true' : 'false'))"
         @keydown.escape.window="sidebarOpen = false"
@@ -77,7 +78,7 @@
                         <div class="menu-group" x-data="{ label: @js($group['label']) }">
                             <button type="button" class="menu-item w-[calc(100%-0.5rem)] {{ $groupActive ? 'active' : '' }}" title="{{ $group['label'] }}" :aria-expanded="openGroups.includes(label)" @click="sidebarCollapsed ? sidebarCollapsed = false : (openGroups.includes(label) ? openGroups = openGroups.filter(item => item !== label) : openGroups.push(label))">
                                 <span class="menu-icon"><x-ui.icon :name="$group['icon']" /></span>
-                                <span class="menu-text flex-1 text-left">{{ $group['label'] }}</span>
+                                <span class="menu-text flex-1 text-start">{{ $group['label'] }}</span>
                                 <svg class="menu-text size-4 transition" :class="openGroups.includes(label) && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7" />
                                 </svg>
@@ -106,13 +107,10 @@
                     <svg class="size-4 shrink-0 transition-transform duration-300" :class="sidebarCollapsed ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
                     <span class="menu-text">{{ __('messages.nav.collapse_menu') }}</span>
                 </button>
-                <form method="POST" action="{{ route('logout') }}" class="mt-3">
-                    @csrf
-                    <button class="logout-button sc-btn sc-btn-secondary w-full" title="{{ __('messages.common.logout') }}">
-                        <x-ui.icon name="logout" size="size-4" />
-                        <span class="menu-text">{{ __('messages.common.logout') }}</span>
-                    </button>
-                </form>
+                <button type="button" class="logout-button sc-btn sc-btn-secondary w-full" title="{{ __('messages.common.logout') }}" @click="logoutConfirmOpen = true">
+                    <x-ui.icon name="logout" size="size-4" />
+                    <span class="menu-text">{{ __('messages.common.logout') }}</span>
+                </button>
             </div>
         </aside>
 
@@ -154,12 +152,9 @@
                         <x-ui.icon name="chat-bubble" />
                     </a>
 
-                    <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">
-                        @csrf
-                        <button class="manar-icon-btn" title="{{ __('messages.common.logout') }}">
-                            <x-ui.icon name="logout" />
-                        </button>
-                    </form>
+                    <button type="button" class="manar-icon-btn hidden sm:flex" title="{{ __('messages.common.logout') }}" @click="logoutConfirmOpen = true">
+                        <x-ui.icon name="logout" />
+                    </button>
 
                     <a href="{{ route('settings.index') }}" class="manar-icon-btn hidden sm:flex" aria-label="Settings">
                         <x-ui.icon name="settings" />
@@ -186,6 +181,30 @@
 
                 {{ $slot }}
             </main>
+        </div>
+
+        <div class="sc-modal-backdrop" x-show="logoutConfirmOpen" x-transition.opacity x-cloak>
+            <section class="sc-modal max-w-md" role="dialog" aria-modal="true" aria-labelledby="logout-confirm-title" @click.outside="logoutConfirmOpen = false">
+                <div class="sc-modal-header">
+                    <div>
+                        <h2 id="logout-confirm-title" class="text-lg font-black text-slate-900">{{ __('messages.auth.logout_confirm_title') }}</h2>
+                        <p class="mt-1 text-sm text-slate-500">{{ __('messages.auth.logout_confirm_text') }}</p>
+                    </div>
+                    <button type="button" class="sc-modal-close" @click="logoutConfirmOpen = false" aria-label="{{ __('messages.common.cancel') }}">
+                        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="sc-modal-footer">
+                    <button type="button" class="sc-btn sc-btn-secondary" @click="logoutConfirmOpen = false">{{ __('messages.common.cancel') }}</button>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button class="sc-btn sc-btn-danger">
+                            <x-ui.icon name="logout" size="size-4" />
+                            {{ __('messages.common.logout') }}
+                        </button>
+                    </form>
+                </div>
+            </section>
         </div>
     </div>
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smart-campus-ofppt-v1';
+const CACHE_NAME = 'smart-campus-ofppt-v2';
 const OFFLINE_URL = '/offline';
 
 self.addEventListener('install', (event) => {
@@ -6,6 +6,7 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.addAll([
             OFFLINE_URL,
             '/manifest.json',
+            '/logo/ofppt-logo.png',
             '/icons/icon-192.svg',
             '/icons/icon-512.svg',
         ]))

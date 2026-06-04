@@ -7,9 +7,13 @@
     <meta name="theme-color" content="#005b9f">
     <title>{{ __('messages.common.login') }} - {{ __('messages.brand') }}</title>
     <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="{{ asset('logo/ofppt-logo.png') }}" type="image/png">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-white {{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
+    @php
+        $oldEmailLocalPart = str(old('email_local_part', old('email', '')))->before('@')->toString();
+    @endphp
     <main class="flex min-h-screen w-full flex-col lg:flex-row">
         <section class="relative hidden w-full overflow-hidden lg:flex lg:w-1/2 xl:w-[55%]">
             <img class="absolute inset-0 h-full w-full object-cover" src="{{ asset('images/campus/ofppt-lab-login.jpeg') }}" alt="OFPPT digital classroom">
@@ -17,7 +21,7 @@
             <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent"></div>
 
             <div class="relative z-10 flex h-full w-full flex-col justify-between px-12 py-10">
-                <a href="{{ route('login') }}" class="flex items-center gap-3">
+                <a href="{{ route('landing') }}" class="flex items-center gap-3">
                     <img class="h-16 w-16 object-contain drop-shadow-[0_0_18px_rgba(255,255,255,0.25)]" src="{{ asset('logo/ofppt-logo.png') }}" alt="OFPPT logo">
                 </a>
 
@@ -32,11 +36,12 @@
         </section>
 
         <section class="relative flex w-full min-h-screen flex-col items-center justify-center bg-white px-4 py-12 lg:min-h-0 lg:w-1/2 lg:px-8 xl:w-[45%]">
-            <div class="fixed right-6 top-5 z-10">
+            <div class="fixed right-6 top-5 z-10 flex items-center gap-2">
+                <a href="{{ route('landing') }}" class="rounded-lg bg-white/80 px-3 py-2 text-xs font-black text-slate-600 shadow-sm ring-1 ring-slate-200 transition hover:text-primary">{{ __('messages.nav.home') }}</a>
                 <x-language-switcher />
             </div>
             <div class="fixed left-6 top-5 z-10 lg:hidden">
-                <a href="{{ route('login') }}" class="flex items-center gap-2">
+                <a href="{{ route('landing') }}" class="flex items-center gap-2">
                     <img class="h-12 w-12 object-contain drop-shadow-[0_0_18px_rgba(59,130,246,0.35)]" src="{{ asset('logo/ofppt-logo.png') }}" alt="OFPPT logo">
                     <span class="font-bold text-slate-700">Smart Campus OFPPT</span>
                 </a>
@@ -93,11 +98,23 @@
                     <span class="h-px flex-1 bg-slate-200"></span>
                 </div>
 
+                <button type="button" class="mb-4 flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50" aria-disabled="true">
+                    <span class="grid size-5 grid-cols-2 gap-0.5" aria-hidden="true">
+                        <span class="bg-[#f25022]"></span>
+                        <span class="bg-[#7fba00]"></span>
+                        <span class="bg-[#00a4ef]"></span>
+                        <span class="bg-[#ffb900]"></span>
+                    </span>
+                    {{ __('messages.auth.microsoft_login') }}
+                </button>
+
                 <form method="POST" action="{{ route('login.store') }}" class="space-y-5">
                     @csrf
                     <div>
-                        <label class="relative flex">
-                            <input class="sc-input h-12 rounded-xl pl-4" id="email" name="email" type="email" value="{{ old('email') }}" placeholder="{{ __('messages.auth.email_placeholder') }}" required autofocus autocomplete="email">
+                        <label class="sc-label" for="email_local_part">{{ __('messages.common.email') }}</label>
+                        <label class="email-domain-field mt-1" dir="ltr">
+                            <input class="email-domain-input" id="email_local_part" name="email_local_part" type="text" value="{{ $oldEmailLocalPart }}" placeholder="{{ __('messages.auth.email_placeholder') }}" required autofocus autocomplete="username" inputmode="email" dir="ltr">
+                            <span class="email-domain-suffix" dir="ltr">@ofppt-edu.ma</span>
                         </label>
                     </div>
                     <div>

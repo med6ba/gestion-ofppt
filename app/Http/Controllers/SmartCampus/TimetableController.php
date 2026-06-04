@@ -120,6 +120,8 @@ class TimetableController extends Controller
 
     public function launchWeeklyTimetable(WeeklyTimetable $weeklyTimetable): RedirectResponse
     {
+        abort_unless(auth()->user()->isSurveillant(), 403);
+
         $weeklyTimetable->update(['status' => 'published', 'published_at' => now()]);
         $this->announcePublishedTimetable($weeklyTimetable);
 
@@ -131,6 +133,8 @@ class TimetableController extends Controller
 
     public function duplicateWeeklyTimetable(Request $request, WeeklyTimetable $weeklyTimetable): RedirectResponse
     {
+        abort_unless(auth()->user()->isSurveillant(), 403);
+
         $request->validate([
             'new_week_start' => ['required', 'date', function ($attr, $value, $fail) {
                 if (Carbon::parse($value)->dayOfWeekIso !== 1) {
@@ -158,6 +162,8 @@ class TimetableController extends Controller
     // ──────────────────────────────────────────────
     public function storeSession(Request $request, TimetableConflictService $conflicts): JsonResponse
     {
+        abort_unless($request->user()->isSurveillant(), 403);
+
         $data = $request->validate([
             'week_start_date' => ['required', 'date'],
             'group_id' => ['required', 'exists:groups,id'],
@@ -169,6 +175,10 @@ class TimetableController extends Controller
             'ends_at' => ['required', 'date_format:H:i', 'after:starts_at'],
             'change_note' => ['nullable', 'string', 'max:500'],
         ]);
+
+        if ($errors = $this->officialSessionSlotErrors($data)) {
+            return response()->json(['success' => false, 'errors' => $errors], 422);
+        }
 
         $this->assertFormateur($data['formateur_id']);
 
@@ -215,6 +225,8 @@ class TimetableController extends Controller
 
     public function updateSession(Request $request, TimetableSession $session, TimetableConflictService $conflicts): JsonResponse
     {
+        abort_unless($request->user()->isSurveillant(), 403);
+
         $data = $request->validate([
             'module_id' => ['required', 'exists:modules,id'],
             'formateur_id' => ['required', 'exists:users,id'],
@@ -224,6 +236,10 @@ class TimetableController extends Controller
             'ends_at' => ['required', 'date_format:H:i', 'after:starts_at'],
             'change_note' => ['nullable', 'string', 'max:500'],
         ]);
+
+        if ($errors = $this->officialSessionSlotErrors($data)) {
+            return response()->json(['success' => false, 'errors' => $errors], 422);
+        }
 
         $this->assertFormateur($data['formateur_id']);
 
@@ -245,6 +261,8 @@ class TimetableController extends Controller
 
     public function destroySession(Request $request, TimetableSession $session): JsonResponse
     {
+        abort_unless($request->user()->isSurveillant(), 403);
+
         $reason = $request->input('reason', '');
         $this->notifyScheduleChange($session, 'Seance supprimee', 'Une seance a ete supprimee de votre emploi du temps.' . ($reason ? ' Raison: ' . $reason : ''));
         $session->delete();
@@ -254,6 +272,8 @@ class TimetableController extends Controller
 
     public function sessionDetails(TimetableSession $session): JsonResponse
     {
+        $this->authorize('view', $session);
+
         $session->load(['group.filiere', 'module', 'room', 'formateur', 'weeklyTimetable']);
         return response()->json($session);
     }
@@ -275,6 +295,13 @@ class TimetableController extends Controller
             return response()->json([
                 'success' => false,
                 'errors' => ['Vous devez demander l\'annulation au moins 2 heures avant la seance.'],
+            ], 422);
+        }
+
+        if (SessionCancellationRequest::pending()->where('timetable_session_id', $session->id)->where('formateur_id', $user->id)->exists()) {
+            return response()->json([
+                'success' => false,
+                'errors' => ['Une demande est deja en attente pour cette seance.'],
             ], 422);
         }
 
@@ -314,6 +341,7 @@ class TimetableController extends Controller
 
     public function approveCancellation(Request $request, SessionCancellationRequest $cancellationRequest): RedirectResponse
     {
+        abort_unless($request->user()->isSurveillant(), 403);
         abort_unless($cancellationRequest->isPending(), 422);
 
         $reviewNote = $request->input('review_note', '');
@@ -361,6 +389,7 @@ class TimetableController extends Controller
 
     public function rejectCancellation(Request $request, SessionCancellationRequest $cancellationRequest): RedirectResponse
     {
+        abort_unless($request->user()->isSurveillant(), 403);
         abort_unless($cancellationRequest->isPending(), 422);
 
         $cancellationRequest->update([
@@ -404,6 +433,7 @@ class TimetableController extends Controller
 
         $sessions = TimetableSession::with(['group', 'module', 'room', 'formateur'])
             ->forWeek($selectedWeekStart)
+            ->whereHas('weeklyTimetable', fn ($query) => $query->where('status', 'published'))
             ->when($user->isFormateur(), fn ($q) => $q->where('formateur_id', $user->id))
             ->when($user->isStagiaire(), fn ($q) => $q->where('group_id', $user->group_id))
             ->orderBy('day_of_week')->orderBy('starts_at')
@@ -416,7 +446,9 @@ class TimetableController extends Controller
         };
 
         $weekHistory = (clone $timetablesQuery)->orderByDesc('week_start_date')
-            ->get(['id', 'week_start_date', 'week_end_date', 'status']);
+            ->get(['id', 'week_start_date', 'week_end_date', 'status'])
+            ->unique(fn (WeeklyTimetable $timetable) => $timetable->week_start_date->toDateString())
+            ->values();
 
         return view('timetable.mine', [
             'gridSessions' => $sessions,
@@ -426,6 +458,54 @@ class TimetableController extends Controller
             'weekHistory' => $weekHistory,
             'weekDays' => $this->weekDays(),
             'isFormateur' => $user->isFormateur(),
+        ]);
+    }
+
+    public function formateurAbsences(Request $request): View
+    {
+        $user = $request->user();
+        abort_unless($user->isFormateur(), 403);
+
+        $now = now();
+        $upcomingSessions = TimetableSession::with(['group', 'module', 'room', 'weeklyTimetable'])
+            ->where('formateur_id', $user->id)
+            ->where('status', '!=', 'cancelled')
+            ->whereDate('ends_on', '>=', $now->toDateString())
+            ->whereHas('weeklyTimetable', fn ($query) => $query->where('status', 'published'))
+            ->orderBy('starts_on')
+            ->orderBy('day_of_week')
+            ->orderBy('starts_at')
+            ->get()
+            ->filter(function (TimetableSession $session) use ($now) {
+                $sessionDateTime = $session->starts_on
+                    ->copy()
+                    ->addDays($session->day_of_week - 1)
+                    ->setTimeFromTimeString(substr($session->starts_at, 0, 5));
+
+                return $sessionDateTime->greaterThan($now);
+            })
+            ->take(24)
+            ->values();
+
+        $pendingSessionIds = SessionCancellationRequest::pending()
+            ->where('formateur_id', $user->id)
+            ->pluck('timetable_session_id');
+
+        $requests = SessionCancellationRequest::with([
+            'timetableSession.group',
+            'timetableSession.module',
+            'timetableSession.room',
+            'reviewedBy',
+        ])
+            ->where('formateur_id', $user->id)
+            ->latest()
+            ->paginate(10);
+
+        return view('formateur.absences', [
+            'upcomingSessions' => $upcomingSessions,
+            'pendingSessionIds' => $pendingSessionIds,
+            'requests' => $requests,
+            'weekDays' => $this->weekDays(),
         ]);
     }
 
@@ -459,8 +539,32 @@ class TimetableController extends Controller
             'formateurs' => User::role(User::ROLE_FORMATEUR)->approved()->orderBy('name')->get(),
             'rooms' => Room::orderBy('code')->get(),
             'weekDays' => $this->weekDays(),
+            'sessionSlots' => $this->officialSessionSlots(),
             'formateur_modules' => \Illuminate\Support\Facades\DB::table('formateur_module')->get(),
         ];
+    }
+
+    private function officialSessionSlots(): array
+    {
+        return [
+            '08:30-11:00' => 'Matin 1 (08:30 - 11:00)',
+            '11:00-13:30' => 'Matin 2 (11:00 - 13:30)',
+            '13:30-16:00' => 'Après-midi 1 (13:30 - 16:00)',
+            '16:00-18:30' => 'Après-midi 2 (16:00 - 18:30)',
+        ];
+    }
+
+    private function officialSessionSlotErrors(array $data): array
+    {
+        $startsAt = substr((string) ($data['starts_at'] ?? ''), 0, 5);
+        $endsAt = substr((string) ($data['ends_at'] ?? ''), 0, 5);
+        $slot = $startsAt.'-'.$endsAt;
+
+        if (array_key_exists($slot, $this->officialSessionSlots())) {
+            return [];
+        }
+
+        return ['La séance doit durer exactement 2h30 et utiliser un créneau OFPPT officiel.'];
     }
 
     private function weekDays(): array

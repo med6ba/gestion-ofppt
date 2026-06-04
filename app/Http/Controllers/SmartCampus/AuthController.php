@@ -33,6 +33,12 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
         $user = $request->user();
+        $locale = $user->preferred_locale ?: session('locale') ?: $request->cookie('locale') ?: app()->getLocale();
+        $supportedLocales = config('app.supported_locales', ['fr', 'ar', 'en']);
+
+        if (!in_array($locale, $supportedLocales, true)) {
+            $locale = config('app.locale', 'fr');
+        }
 
         if (!$user->enabled) {
             Auth::logout();
@@ -58,9 +64,13 @@ class AuthController extends Controller
             return back()->withErrors(['email' => __('messages.auth.registration_rejected')]);
         }
 
-        $user->forceFill(['last_login_at' => now()])->save();
+        $user->forceFill([
+            'last_login_at' => now(),
+            'preferred_locale' => $locale,
+        ])->save();
+        $request->session()->put('locale', $locale);
 
-        return redirect()->intended(route($user->dashboardRoute()));
+        return redirect()->intended(route($user->dashboardRoute()))->withCookie(cookie()->forever('locale', $locale));
     }
 
     public function showRegister(): View
@@ -146,11 +156,13 @@ class AuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
+        $locale = $request->user()?->preferred_locale ?: session('locale') ?: $request->cookie('locale') ?: app()->getLocale();
+
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route('login')->withCookie(cookie()->forever('locale', $locale));
     }
 }

@@ -42,11 +42,11 @@ Open `http://localhost:9999`.
 
 All demo passwords are `password`.
 
-- Directeur: `directeur@ofppt.test`
-- Surveillant General: `surveillant@ofppt.test`
-- Formateur: `formateur@ofppt.test`
-- Stagiaire approved: `stagiaire@ofppt.test`
-- Stagiaire pending: `pending@ofppt.test`
+- Directeur: `directeur@ofppt-edu.ma`
+- Surveillant General: `surveillant@ofppt-edu.ma`
+- Formateur: `formateur@ofppt-edu.ma`
+- Stagiaire approved: `stagiaire@ofppt-edu.ma`
+- Stagiaire pending: `pending@ofppt-edu.ma`
 
 ## Main Workflows
 

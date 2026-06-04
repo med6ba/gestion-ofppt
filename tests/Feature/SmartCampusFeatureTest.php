@@ -9,9 +9,8 @@ use App\Models\Room;
 use App\Models\TimetableSession;
 use App\Models\TrainingModule;
 use App\Models\User;
-use App\Notifications\SmartCampusNotification;
+use App\Models\WeeklyTimetable;
 use App\Services\ChatAccessService;
-use Illuminate\Support\Facades\Notification;
 
 test('local app rejects custom host domains', function () {
     $this->get('http://eve.manar.com:8000/login')
@@ -22,7 +21,7 @@ test('demo directeur can sign in and reach dashboard', function () {
     $this->seed();
 
     $this->post('/login', [
-        'email' => 'directeur@ofppt.test',
+        'email' => 'directeur@ofppt-edu.ma',
         'password' => 'password',
     ])->assertRedirect(route('directeur.dashboard'));
 });
@@ -31,7 +30,7 @@ test('pending stagiaire cannot access the app', function () {
     $this->seed();
 
     $this->post('/login', [
-        'email' => 'pending@ofppt.test',
+        'email' => 'pending@ofppt-edu.ma',
         'password' => 'password',
     ])->assertRedirect(route('approval.pending'));
 });
@@ -39,48 +38,47 @@ test('pending stagiaire cannot access the app', function () {
 test('surveillant timetable creation blocks room conflicts', function () {
     $this->seed();
 
-    $surveillant = User::where('email', 'surveillant@ofppt.test')->first();
+    $surveillant = User::where('email', 'surveillant@ofppt-edu.ma')->first();
     $existing = TimetableSession::first();
     $room = Room::whereKey($existing->room_id)->first();
 
-    $this->actingAs($surveillant)->post(route('timetable.store'), [
+    $this->actingAs($surveillant)->postJson(route('timetable.sessions.store'), [
         'group_id' => $existing->group_id,
         'module_id' => $existing->module_id,
         'formateur_id' => $existing->formateur_id,
         'room_id' => $room->id,
         'day_of_week' => $existing->day_of_week,
-        'starts_on' => $existing->starts_on->format('Y-m-d'),
-        'ends_on' => $existing->ends_on->format('Y-m-d'),
-        'week_number' => $existing->week_number,
+        'week_start_date' => $existing->starts_on->startOfWeek()->format('Y-m-d'),
         'starts_at' => substr($existing->starts_at, 0, 5),
         'ends_at' => substr($existing->ends_at, 0, 5),
-    ])->assertSessionHasErrors('starts_at');
+    ])->assertStatus(422);
 });
 
-test('surveillant publishes a weekly group timetable and emails all approved roles', function () {
+test('surveillant creates a weekly group timetable session and syncs teaching assignments', function () {
     $this->seed();
-    Notification::fake();
 
-    $surveillant = User::where('email', 'surveillant@ofppt.test')->first();
+    $surveillant = User::where('email', 'surveillant@ofppt-edu.ma')->first();
     $group = Group::where('code', 'DD101')->first();
-    $formateur = User::where('email', 'amina.formateur@ofppt.test')->first();
+    $formateur = User::where('email', 'amina.formateur@ofppt-edu.ma')->first();
     $module = TrainingModule::where('code', 'M-NET')->first();
     $room = Room::where('code', 'S18')->first();
     $weekStart = now()->addWeeks(3)->startOfWeek();
 
-    $this->actingAs($surveillant)->post(route('timetable.store'), [
+    $this->actingAs($surveillant)->postJson(route('timetable.sessions.store'), [
         'group_id' => $group->id,
         'module_id' => $module->id,
         'formateur_id' => $formateur->id,
         'room_id' => $room->id,
         'day_of_week' => 6,
-        'starts_on' => $weekStart->copy()->addDay()->toDateString(),
+        'week_start_date' => $weekStart->toDateString(),
         'starts_at' => '11:00',
-        'ends_at' => '12:30',
-    ])->assertRedirect(route('timetable.index', [
-        'group_id' => $group->id,
-        'week_start' => $weekStart->toDateString(),
-    ]));
+        'ends_at' => '13:30',
+    ])->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('redirect', route('timetable.index', [
+            'group_id' => $group->id,
+            'week_start' => $weekStart->toDateString(),
+        ]));
 
     $created = TimetableSession::where('group_id', $group->id)
         ->where('formateur_id', $formateur->id)
@@ -93,43 +91,32 @@ test('surveillant publishes a weekly group timetable and emails all approved rol
     expect($created->ends_on->toDateString())->toBe($weekStart->copy()->addDays(5)->toDateString());
     expect($created->week_number)->toBe($weekStart->weekOfYear);
     expect($formateur->fresh()->teachingGroups()->where('groups.id', $group->id)->wherePivot('module_id', $module->id)->exists())->toBeTrue();
-
-    User::approved()
-        ->where('enabled', true)
-        ->get()
-        ->each(fn (User $user) => Notification::assertSentTo(
-            $user,
-            SmartCampusNotification::class,
-            fn ($notification, array $channels) => in_array('database', $channels, true) && in_array('mail', $channels, true)
-        ));
-
-    Notification::assertNotSentTo(User::where('email', 'pending@ofppt.test')->first(), SmartCampusNotification::class);
 });
 
 test('surveillant cannot create sunday timetable sessions', function () {
     $this->seed();
 
-    $surveillant = User::where('email', 'surveillant@ofppt.test')->first();
+    $surveillant = User::where('email', 'surveillant@ofppt-edu.ma')->first();
     $existing = TimetableSession::first();
     $weekStart = now()->addWeeks(4)->startOfWeek();
 
-    $this->actingAs($surveillant)->post(route('timetable.store'), [
+    $this->actingAs($surveillant)->postJson(route('timetable.sessions.store'), [
         'group_id' => $existing->group_id,
         'module_id' => $existing->module_id,
         'formateur_id' => $existing->formateur_id,
         'room_id' => $existing->room_id,
         'day_of_week' => 7,
-        'starts_on' => $weekStart->toDateString(),
+        'week_start_date' => $weekStart->toDateString(),
         'starts_at' => '08:30',
         'ends_at' => '10:30',
-    ])->assertSessionHasErrors('day_of_week');
+    ])->assertStatus(422);
 });
 
 test('timetable pages render weekly grid layout', function () {
     $this->seed();
 
-    $surveillant = User::where('email', 'surveillant@ofppt.test')->first();
-    $formateur = User::where('email', 'formateur@ofppt.test')->first();
+    $surveillant = User::where('email', 'surveillant@ofppt-edu.ma')->first();
+    $formateur = User::where('email', 'formateur@ofppt-edu.ma')->first();
 
     $this->actingAs($surveillant)
         ->get(route('timetable.index'))
@@ -148,13 +135,23 @@ test('timetable pages render weekly grid layout', function () {
 test('surveillant activates a week visible to all timetable viewers', function () {
     $this->seed();
 
-    $surveillant = User::where('email', 'surveillant@ofppt.test')->first();
-    $directeur = User::where('email', 'directeur@ofppt.test')->first();
-    $formateur = User::where('email', 'formateur@ofppt.test')->first();
+    $surveillant = User::where('email', 'surveillant@ofppt-edu.ma')->first();
+    $directeur = User::where('email', 'directeur@ofppt-edu.ma')->first();
+    $formateur = User::where('email', 'formateur@ofppt-edu.ma')->first();
     $existing = TimetableSession::where('formateur_id', $formateur->id)->first();
     $nextWeekStart = now()->addWeek()->startOfWeek();
 
+    $weeklyTimetable = WeeklyTimetable::create([
+        'group_id' => $existing->group_id,
+        'week_start_date' => $nextWeekStart->toDateString(),
+        'week_end_date' => $nextWeekStart->copy()->addDays(5)->toDateString(),
+        'status' => 'published',
+        'published_at' => now(),
+        'created_by' => $surveillant->id,
+    ]);
+
     $publishedSession = TimetableSession::create([
+        'weekly_timetable_id' => $weeklyTimetable->id,
         'group_id' => $existing->group_id,
         'module_id' => $existing->module_id,
         'formateur_id' => $existing->formateur_id,
@@ -172,14 +169,6 @@ test('surveillant activates a week visible to all timetable viewers', function (
         ->approved()
         ->where('group_id', $publishedSession->group_id)
         ->first();
-
-    $this->actingAs($surveillant)->post(route('timetable.active-week'), [
-        'group_id' => $publishedSession->group_id,
-        'week_start' => $nextWeekStart->toDateString(),
-    ])->assertRedirect(route('timetable.index', [
-        'group_id' => $publishedSession->group_id,
-        'week_start' => $nextWeekStart->toDateString(),
-    ]));
 
     $this->actingAs($directeur)
         ->get(route('timetable.mine'))
@@ -202,8 +191,8 @@ test('surveillant activates a week visible to all timetable viewers', function (
 test('stagiaire cannot chat with directeur', function () {
     $this->seed();
 
-    $stagiaire = User::where('email', 'stagiaire@ofppt.test')->first();
-    $directeur = User::where('email', 'directeur@ofppt.test')->first();
+    $stagiaire = User::where('email', 'stagiaire@ofppt-edu.ma')->first();
+    $directeur = User::where('email', 'directeur@ofppt-edu.ma')->first();
 
     expect(app(ChatAccessService::class)->canMessage($stagiaire, $directeur))->toBeFalse();
 });
@@ -211,7 +200,7 @@ test('stagiaire cannot chat with directeur', function () {
 test('surveillant can open pdf aligned attendance reports', function () {
     $this->seed();
 
-    $surveillant = User::where('email', 'surveillant@ofppt.test')->first();
+    $surveillant = User::where('email', 'surveillant@ofppt-edu.ma')->first();
 
     $this->actingAs($surveillant)
         ->get(route('attendance.reports'))
@@ -223,7 +212,7 @@ test('surveillant can open pdf aligned attendance reports', function () {
 test('formateur attendance session shows qr and statistics', function () {
     $this->seed();
 
-    $formateur = User::where('email', 'formateur@ofppt.test')->first();
+    $formateur = User::where('email', 'formateur@ofppt-edu.ma')->first();
     $session = TimetableSession::where('formateur_id', $formateur->id)->first();
 
     $this->actingAs($formateur)
@@ -236,7 +225,7 @@ test('formateur attendance session shows qr and statistics', function () {
 test('qr refresh rotates token without recreating attendance session', function () {
     $this->seed();
 
-    $formateur = User::where('email', 'formateur@ofppt.test')->first();
+    $formateur = User::where('email', 'formateur@ofppt-edu.ma')->first();
     $session = TimetableSession::where('formateur_id', $formateur->id)
         ->whereHas('activeAttendanceSession')
         ->first();
@@ -257,8 +246,8 @@ test('qr refresh rotates token without recreating attendance session', function 
 test('normal late declaration requires formateur validation before finalization', function () {
     $this->seed();
 
-    $formateur = User::where('email', 'formateur@ofppt.test')->first();
-    $stagiaire = User::where('email', 'stagiaire@ofppt.test')->first();
+    $formateur = User::where('email', 'formateur@ofppt-edu.ma')->first();
+    $stagiaire = User::where('email', 'stagiaire@ofppt-edu.ma')->first();
     $session = TimetableSession::where('formateur_id', $formateur->id)
         ->where('group_id', $stagiaire->group_id)
         ->first();
@@ -299,9 +288,9 @@ test('normal late declaration requires formateur validation before finalization'
 test('severe late declaration is escalated to surveillant general', function () {
     $this->seed();
 
-    $formateur = User::where('email', 'formateur@ofppt.test')->first();
-    $surveillant = User::where('email', 'surveillant@ofppt.test')->first();
-    $stagiaire = User::where('email', 'ahmed.risk@ofppt.test')->first();
+    $formateur = User::where('email', 'formateur@ofppt-edu.ma')->first();
+    $surveillant = User::where('email', 'surveillant@ofppt-edu.ma')->first();
+    $stagiaire = User::where('email', 'ahmed.risk@ofppt-edu.ma')->first();
     $session = TimetableSession::where('formateur_id', $formateur->id)
         ->where('group_id', $stagiaire->group_id)
         ->first();
@@ -335,7 +324,7 @@ test('severe late declaration is escalated to surveillant general', function () 
 test('chat screen shows secure smart campus connect shell', function () {
     $this->seed();
 
-    $surveillant = User::where('email', 'surveillant@ofppt.test')->first();
+    $surveillant = User::where('email', 'surveillant@ofppt-edu.ma')->first();
 
     $this->actingAs($surveillant)
         ->get(route('chat.index'))

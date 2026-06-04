@@ -36,7 +36,7 @@ class BadgeController extends Controller
         $html = view('badges.pdf', [
             'stagiaire' => $stagiaire,
             'qrDataUri' => $this->qrDataUri($stagiaire->qr_login_token),
-            'logoDataUri' => $this->imageDataUri(public_path('logo/ofppt-logo.svg')),
+            'logoDataUri' => $this->imageDataUri(public_path('logo/ofppt-logo.png')),
         ])->render();
 
         $options = new Options();

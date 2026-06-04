@@ -50,7 +50,7 @@ class AttendanceController extends Controller
     {
         $this->authorize('markAttendance', $session);
 
-        $attendanceSession = $this->currentAttendanceSession($session);
+        $attendanceSession = $this->latestAttendanceSession($session);
         $attendanceRecords = $attendanceSession
             ? $attendanceSession->attendances()->with(['stagiaire.riskScore', 'stagiaire.presenceProfile'])->get()
             : $session->attendances()->with(['stagiaire.riskScore', 'stagiaire.presenceProfile'])->get();
@@ -88,6 +88,10 @@ class AttendanceController extends Controller
         PresenceXpService $presenceXp
     ): RedirectResponse {
         $this->authorize('markAttendance', $session);
+
+        if ($this->latestAttendanceSession($session)?->status === AttendanceSession::STATUS_CLOSED) {
+            return back()->withErrors(['attendance' => 'Cette seance est deja cloturee. Les statuts manuels ne peuvent plus etre modifies.']);
+        }
 
         $attendanceSession = $this->ensureAttendanceSession($session, $request->user());
         $validStudents = $session->group->stagiaires()->approved()->pluck('id')->all();
@@ -133,6 +137,10 @@ class AttendanceController extends Controller
     public function generateQr(TimetableSession $session, Request $request): RedirectResponse
     {
         $this->authorize('markAttendance', $session);
+
+        if ($this->latestAttendanceSession($session)?->status === AttendanceSession::STATUS_CLOSED) {
+            return back()->withErrors(['qr' => 'Cette seance est deja cloturee.']);
+        }
 
         $attendanceSession = $this->currentAttendanceSession($session);
 
@@ -555,6 +563,10 @@ class AttendanceController extends Controller
         $attendanceSession = $this->currentAttendanceSession($session);
 
         if (!$attendanceSession) {
+            if ($this->latestAttendanceSession($session)?->status === AttendanceSession::STATUS_CLOSED) {
+                return back()->withErrors(['correction' => 'Cette seance est deja cloturee.']);
+            }
+
             return back()->withErrors(['correction' => 'Aucune session d’appel active a corriger.']);
         }
 
@@ -600,6 +612,10 @@ class AttendanceController extends Controller
         PresenceXpService $presenceXp
     ): RedirectResponse {
         $this->authorize('markAttendance', $session);
+
+        if ($this->latestAttendanceSession($session)?->status === AttendanceSession::STATUS_CLOSED) {
+            return back()->with('status', 'Cette seance est deja cloturee.');
+        }
 
         $attendanceSession = $this->currentAttendanceSession($session);
 
@@ -822,6 +838,19 @@ class AttendanceController extends Controller
     private function currentAttendanceSession(TimetableSession $session): ?AttendanceSession
     {
         $attendanceSession = $session->activeAttendanceSession()->with('activeQrToken')->first();
+        $attendanceSession?->refreshClockStatus();
+
+        return $attendanceSession?->fresh(['activeQrToken']);
+    }
+
+    private function latestAttendanceSession(TimetableSession $session): ?AttendanceSession
+    {
+        $attendanceSession = $session->attendanceSessions()
+            ->with('activeQrToken')
+            ->latest('actual_started_at')
+            ->latest('id')
+            ->first();
+
         $attendanceSession?->refreshClockStatus();
 
         return $attendanceSession?->fresh(['activeQrToken']);

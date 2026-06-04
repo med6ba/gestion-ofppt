@@ -142,6 +142,19 @@
     </div>
 
     <section class="mt-6 sc-card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold">{{ __('messages.dashboard.attendance_distribution') }}</h2>
+                <p class="text-sm text-slate-500">{{ __('messages.dashboard.my_progress') }}</p>
+            </div>
+            <span class="sc-badge bg-campus-50 text-campus-700">{{ $presenceProfile->rank_level }}</span>
+        </div>
+        <div class="mt-5 h-64">
+            <canvas id="studentAttendanceChart"></canvas>
+        </div>
+    </section>
+
+    <section class="mt-6 sc-card p-5">
         <h2 class="text-lg font-bold">{{ __('messages.dashboard.tomorrow_classes') }}</h2>
         <div class="mt-4 grid gap-3 md:grid-cols-2">
             @forelse ($tomorrowSessions as $session)
@@ -154,4 +167,40 @@
             @endforelse
         </div>
     </section>
+
+    @push('scripts')
+        <script>
+            const studentAttendance = {
+                labels: [
+                    @js(__('messages.attendance_status.present')),
+                    @js(__('messages.attendance_status.absent')),
+                    @js(__('messages.dashboard.late_arrivals')),
+                    @js(__('messages.attendance_status.justified')),
+                ],
+                data: [
+                    {{ (int) $attendanceCounts->get('present', 0) }},
+                    {{ (int) $attendanceCounts->get('absent', 0) }},
+                    {{ (int) $lateTotal }},
+                    {{ (int) $attendanceCounts->get('justified', 0) }},
+                ],
+            };
+
+            new Chart(document.getElementById('studentAttendanceChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: studentAttendance.labels,
+                    datasets: [{
+                        data: studentAttendance.data,
+                        backgroundColor: ['#009245', '#e11d48', '#f59e0b', '#005b9f'],
+                        borderWidth: 0,
+                    }],
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    cutout: '66%',
+                    plugins: { legend: { position: 'bottom' } },
+                },
+            });
+        </script>
+    @endpush
 </x-layouts.app>
