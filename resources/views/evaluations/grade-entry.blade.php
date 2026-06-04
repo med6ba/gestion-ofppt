@@ -67,12 +67,7 @@
                 </div>
             @endif
 
-            <!-- Client-side live warning -->
-            <div x-show="!showErrors && filledCount < totalCount && filledCount > 0" x-cloak
-                 class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 flex items-center gap-2">
-                <svg class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span><strong x-text="totalCount - filledCount"></strong> champ(s) encore vide(s). Remplissez-les tous pour pouvoir publier.</span>
-            </div>
+            <!-- Removed live warning since we no longer block on empty fields -->
 
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -89,7 +84,7 @@
                             </span>
                         </p>
                     </div>
-                    <span class="sc-badge {{ $isPublished ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">{{ $isPublished ? 'Publié' : 'Brouillon' }}</span>
+                    <!-- Badge removed since everything is always published -->
                 </div>
 
                 @if ($isPublished)
@@ -282,33 +277,9 @@
                     </div>
                 </div>
 
-                <button type="submit" name="action" value="draft" class="sc-btn sc-btn-secondary">Enregistrer brouillon</button>
-
-                <div x-data class="relative group">
-                    <button type="submit" name="action" value="publish"
-                            class="sc-btn sc-btn-primary transition-opacity"
-                            :class="filledCount < totalCount ? 'opacity-60 cursor-not-allowed' : ''"
-                            @click.prevent="
-                                if (filledCount < totalCount) {
-                                    showErrors = false;
-                                    $dispatch('publish-blocked', { missing: totalCount - filledCount });
-                                    // scroll to first empty score input
-                                    const first = $el.closest('form').querySelector('input[data-empty=true]');
-                                    if (first) { first.focus(); first.scrollIntoView({ behavior:'smooth', block:'center' }); }
-                                } else {
-                                    $el.closest('form').querySelectorAll('[name=action]').forEach(b => { if(b !== $el) b.disabled = true; });
-                                    $el.form.submit();
-                                }
-                            ">
-                        Publier les notes
-                    </button>
-                    <!-- Tooltip when disabled -->
-                    <div x-show="filledCount < totalCount" x-cloak
-                         class="absolute bottom-12 right-0 w-56 rounded-lg bg-slate-800 text-white text-xs p-2.5 shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                        <span x-text="(totalCount - filledCount) + ' note(s) manquante(s) avant la publication.'"></span>
-                        <div class="absolute -bottom-1 right-4 w-2 h-2 bg-slate-800 rotate-45"></div>
-                    </div>
-                </div>
+                <button type="submit" name="action" value="save" class="sc-btn sc-btn-primary">
+                    Enregistrer les notes
+                </button>
             </div>
         </form>
     @endif

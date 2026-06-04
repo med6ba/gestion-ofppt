@@ -141,9 +141,7 @@ class EvaluationController extends Controller
         }
 
         DB::transaction(function () use ($data, $user, $groupId, $module, $moduleId, $validStudentIds, $existingEvaluations, $activeTypes, $hasPublishedGrades, $gradeCalculation) {
-            $status = ($data['action'] === 'publish' || $hasPublishedGrades)
-                ? Evaluation::STATUS_PUBLISHED
-                : Evaluation::STATUS_DRAFT;
+            $status = Evaluation::STATUS_PUBLISHED;
             $changedPublishedGrades = collect();
             $savedEvaluations = collect();
 
@@ -247,27 +245,25 @@ class EvaluationController extends Controller
                         route('evaluations.index'),
                         'evaluations'
                     )));
-            } else {
-                $gradeCalculation->refreshDraftForEvaluation($savedEvaluations->first());
             }
         });
 
         return redirect()
             ->route('evaluations.grades', ['group_id' => $groupId, 'module_id' => $moduleId, 'evaluation_date' => $data['evaluation_date']])
-            ->with('status', $data['action'] === 'publish' ? 'Notes publiees.' : 'Brouillon enregistre.');
+            ->with('status', 'Notes enregistrées avec succès.');
     }
 
     public function statistics(Request $request, GradeCalculationService $grades): View
     {
-        $rows = $this->summaryRows($request->merge(['status' => ModuleGradeSummary::STATUS_PUBLISHED]), $request->user(), $grades)
-            ->filter(fn (ModuleGradeSummary $row) => $row->moy_module !== null)
-            ->values();
+        $rows = $this->summaryRows($request->merge(['status' => ModuleGradeSummary::STATUS_PUBLISHED]), $request->user(), $grades)->values();
 
-        $moduleAverages = $rows
+        $rowsWithMoy = $rows->filter(fn (ModuleGradeSummary $row) => $row->moy_module !== null);
+
+        $moduleAverages = $rowsWithMoy
             ->groupBy(fn (ModuleGradeSummary $row) => $row->module?->name ?? 'Module')
             ->map(fn (Collection $items, string $label) => ['label' => $label, 'value' => round($items->avg('moy_module'), 2)])
             ->values();
-        $groupSuccess = $rows
+        $groupSuccess = $rowsWithMoy
             ->groupBy(fn (ModuleGradeSummary $row) => $row->group?->code ?? 'Groupe')
             ->map(function (Collection $items, string $label) {
                 $complete = $items->filter->isComplete();
@@ -278,12 +274,12 @@ class EvaluationController extends Controller
                 ];
             })
             ->values();
-        $belowTen = $rows->filter(fn (ModuleGradeSummary $row) => (float) $row->moy_module < 10);
+        $belowTen = $rowsWithMoy->filter(fn (ModuleGradeSummary $row) => (float) $row->moy_module < 10);
         $distribution = collect([
-            ['label' => '0-5', 'value' => $rows->filter(fn ($row) => (float) $row->moy_module < 5)->count()],
-            ['label' => '5-10', 'value' => $rows->filter(fn ($row) => (float) $row->moy_module >= 5 && (float) $row->moy_module < 10)->count()],
-            ['label' => '10-14', 'value' => $rows->filter(fn ($row) => (float) $row->moy_module >= 10 && (float) $row->moy_module < 14)->count()],
-            ['label' => '14-20', 'value' => $rows->filter(fn ($row) => (float) $row->moy_module >= 14)->count()],
+            ['label' => '0-5', 'value' => $rowsWithMoy->filter(fn ($row) => (float) $row->moy_module < 5)->count()],
+            ['label' => '5-10', 'value' => $rowsWithMoy->filter(fn ($row) => (float) $row->moy_module >= 5 && (float) $row->moy_module < 10)->count()],
+            ['label' => '10-14', 'value' => $rowsWithMoy->filter(fn ($row) => (float) $row->moy_module >= 10 && (float) $row->moy_module < 14)->count()],
+            ['label' => '14-20', 'value' => $rowsWithMoy->filter(fn ($row) => (float) $row->moy_module >= 14)->count()],
         ]);
 
         return view('evaluations.statistics', [
@@ -292,7 +288,7 @@ class EvaluationController extends Controller
             'groupSuccess' => $groupSuccess,
             'distribution' => $distribution,
             'belowTen' => $belowTen,
-            'globalAverage' => $rows->count() ? round($rows->avg('moy_module'), 2) : null,
+            'globalAverage' => $rowsWithMoy->count() ? round($rowsWithMoy->avg('moy_module'), 2) : null,
             'bestModule' => $moduleAverages->sortByDesc('value')->first(),
             'weakestModule' => $moduleAverages->sortBy('value')->first(),
             'filters' => $request->only(['group_id', 'module_id', 'formateur_id']),
