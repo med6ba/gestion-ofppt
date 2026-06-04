@@ -54,7 +54,7 @@
                 @endif
                 @if ($profile->isStagiaire() && $profile->presenceProfile)
                     <div class="rounded-lg bg-campus-50 p-4 text-campus-800">
-                        <div class="text-sm font-semibold">Presence XP</div>
+                        <div class="text-sm font-semibold">Podium</div>
                         <div class="mt-1 text-3xl font-bold">{{ $profile->presenceProfile->xp_points }}</div>
                         <div class="mt-2 text-xs">{{ $profile->presenceProfile->rank_level }} | streak {{ $profile->presenceProfile->attendance_streak }}</div>
                     </div>

@@ -50,7 +50,7 @@
 
             <section class="sc-card p-5">
                 <div class="flex items-center justify-between gap-3">
-                    <h2 class="text-lg font-bold">Presence XP overview</h2>
+                    <h2 class="text-lg font-bold">Podium overview</h2>
                     <a href="{{ route('attendance.leaderboard') }}" class="sc-btn sc-btn-secondary">Open</a>
                 </div>
                 <div class="mt-4 space-y-3">

@@ -20,11 +20,11 @@
     @endphp
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <div class="sc-card p-5">
-            <div class="text-sm font-medium text-slate-500">Presence XP</div>
-            <div class="mt-3 text-3xl font-bold">{{ $presenceProfile->xp_points }}</div>
+        <section class="sc-card p-5">
+            <div class="text-sm font-medium text-slate-500">Podium</div>
+            <div class="mt-3 text-3xl font-bold">{{ $presenceProfile->xp_points }} XP</div>
             <div class="mt-1 text-xs font-semibold text-slate-500">{{ $presenceProfile->rank_level }}</div>
-        </div>
+        </section>
         @foreach ([
             ['label' => 'Presents', 'value' => $summary['present']],
             ['label' => 'Retards valides', 'value' => $summary['acceptedLate']],
@@ -38,17 +38,14 @@
         @endforeach
     </div>
 
-    <section class="mt-6 sc-card p-5">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h2 class="text-lg font-bold">Historique de presence</h2>
-                <p class="text-sm text-slate-500">Vos presences, retards et absences enregistres.</p>
+    <div class="grid gap-6 lg:grid-cols-2">
+        <section class="sc-card">
+            <div class="border-b border-slate-100 p-5 flex items-center justify-between">
+                <h2 class="font-bold">Dernières absences</h2>
+                <a href="{{ route('attendance.leaderboard') }}" class="text-sm font-medium text-campus-600 hover:text-campus-700">
+                    Voir le Podium
+                </a>
             </div>
-            <a href="{{ route('attendance.leaderboard') }}" class="sc-btn sc-btn-secondary">
-                <x-ui.icon name="award" size="size-4" />
-                Presence XP
-            </a>
-        </div>
 
         <div class="mt-4 grid gap-3">
             @forelse ($attendances as $attendance)

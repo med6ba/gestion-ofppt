@@ -1,7 +1,5 @@
 <x-layouts.app title="Mark Attendance">
     @php
-        use App\Models\AttendanceSession;
-
         $statusLabels = [
             'pending' => 'En attente',
             'present' => 'Present',
@@ -21,7 +19,7 @@
             default => 'bg-slate-100 text-slate-700',
         };
         $qrPhaseOpen = $attendanceSession?->isQrPhaseOpen() ?? false;
-        $attendanceClosed = $attendanceSession?->status === AttendanceSession::STATUS_CLOSED;
+        $attendanceClosed = $attendanceSession?->status === \App\Models\AttendanceSession::STATUS_CLOSED;
         $qrClosed = $attendanceSession && !$qrPhaseOpen && !$attendanceClosed;
         $canFinalize = $attendanceSession && !$attendanceClosed && $latePending->isEmpty();
     @endphp

@@ -68,7 +68,7 @@
 
     <section class="mt-6 sc-card p-5">
         <div class="flex items-center justify-between gap-3">
-            <h2 class="text-lg font-bold">Presence XP group leaders</h2>
+            <h2 class="text-lg font-bold">Podium group leaders</h2>
             <a href="{{ route('attendance.leaderboard') }}" class="sc-btn sc-btn-secondary">Open</a>
         </div>
         <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">

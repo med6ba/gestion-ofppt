@@ -1,4 +1,4 @@
-<x-layouts.app title="Presence XP">
+<x-layouts.app title="Podium">
     @php
         $user = auth()->user();
         $visibleProfiles = $user->isStagiaire() ? $profiles->take(5) : $profiles;
@@ -29,15 +29,24 @@
 
     <div class="grid gap-6 xl:grid-cols-[1fr_360px]">
         <section class="sc-card p-5">
-            <h2 class="text-lg font-bold">{{ $user->isStagiaire() ? 'Top 5 Presence XP' : 'Leaderboard' }}</h2>
+            <h2 class="text-lg font-bold">{{ $user->isStagiaire() ? 'Top 5 Podium' : 'Leaderboard' }}</h2>
             <div class="mt-4 grid gap-3">
                 @forelse ($visibleProfiles as $index => $profile)
                     <div class="rounded-lg border border-slate-200 p-4">
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <div class="min-w-0">
-                                <div class="font-semibold">
-                                    #{{ $index + 1 }}
-                                    {{ $user->isStagiaire() && $profile->stagiaire_id !== $user->id ? explode(' ', $profile->stagiaire->name)[0] : $profile->stagiaire->name }}
+                                <div class="font-semibold flex items-center gap-2">
+                                    <span>#{{ $index + 1 }}</span>
+                                    <span>{{ $user->isStagiaire() && $profile->stagiaire_id !== $user->id ? explode(' ', $profile->stagiaire->name)[0] : $profile->stagiaire->name }}</span>
+                                    @if($profile->xp_points < 0)
+                                        <span class="text-xs font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full">#loser</span>
+                                    @elseif($index === 0)
+                                        <span class="text-xs font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">#nerd</span>
+                                    @elseif($index === 1)
+                                        <span class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">#fighter</span>
+                                    @elseif($index === 2)
+                                        <span class="text-xs font-bold text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">#hustler</span>
+                                    @endif
                                 </div>
                                 <div class="mt-1 text-xs text-slate-500">{{ $profile->stagiaire->group?->code }} | {{ $profile->rank_level }} | streak {{ $profile->attendance_streak }}</div>
                             </div>

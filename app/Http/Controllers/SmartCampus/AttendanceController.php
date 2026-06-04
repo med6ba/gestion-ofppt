@@ -936,7 +936,7 @@ class AttendanceController extends Controller
         $profile = $presenceXp->refreshFor($student);
 
         $student->notify(new SmartCampusNotification(
-            'Presence XP mis a jour',
+            'Podium mis a jour',
             "Votre solde est maintenant {$profile->xp_points} XP ({$profile->rank_level}).",
             route('attendance.leaderboard'),
             'xp'

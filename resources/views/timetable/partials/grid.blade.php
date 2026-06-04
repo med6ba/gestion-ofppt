@@ -85,11 +85,13 @@
             @endforeach
 
             <div class="edt-time-axis">
-                @for ($hour = $startHour; $hour <= $endHour; $hour++)
-                    @if ($hour !== $endHour)
-                        <div class="edt-time-label" style="top: {{ ($hour - $startHour) * $hourHeight }}px">{{ $hour }}:00</div>
-                    @endif
-                @endfor
+                @foreach (['08:30', '11:00', '13:30', '16:00'] as $marker)
+                    @php
+                        $markerMins = $toMinutes($marker);
+                        $top = max(0, (($markerMins - ($startHour * 60)) / 60) * $hourHeight);
+                    @endphp
+                    <div class="edt-time-label" style="top: {{ $top }}px">{{ $marker }}</div>
+                @endforeach
             </div>
 
             @foreach ($days as $dayNumber => $dayName)

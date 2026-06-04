@@ -353,6 +353,8 @@ class DatabaseSeeder extends Seeder
             route('attendance.reports'),
             'risk'
         ), 'Risk report ready', 'risk');
+
+        $this->call(TimetableSeeder::class);
     }
 
     private function demoUser(string $email, array $attributes, ?string $legacyEmail = null): User

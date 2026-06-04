@@ -28,7 +28,7 @@
                 <h2 class="text-lg font-bold">Late arrival settings</h2>
                 <p class="text-sm text-slate-500">Ces valeurs sont appliquees cote serveur a chaque nouvelle session d'appel.</p>
             </div>
-            <a href="{{ route('attendance.leaderboard') }}" class="sc-btn sc-btn-secondary">Presence XP</a>
+            <a href="{{ route('attendance.leaderboard') }}" class="sc-btn sc-btn-secondary">Podium</a>
         </div>
         <form method="POST" action="{{ route('attendance.settings.update') }}" class="mt-4 grid gap-3 md:grid-cols-4">
             @csrf
@@ -118,7 +118,7 @@
             </section>
 
             <section class="sc-card p-5">
-                <h2 class="text-lg font-bold">Presence XP top</h2>
+                <h2 class="text-lg font-bold">Podium</h2>
                 <div class="mt-4 space-y-3">
                     @forelse ($topProfiles as $profile)
                         <div class="rounded-lg border border-slate-200 p-3">

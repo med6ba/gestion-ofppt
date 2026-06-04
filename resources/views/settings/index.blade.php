@@ -6,7 +6,7 @@
             : route('attendance.leaderboard');
         $presenceBody = $user->isDirecteur() || $user->isSurveillant()
             ? 'Fenetre QR, retard normal, retard important et rapports globaux.'
-            : 'Votre progression Presence XP et les indicateurs accessibles a votre role.';
+            : 'Votre progression Podium et les indicateurs accessibles a votre role.';
     @endphp
 
     <section class="sc-card p-6">
