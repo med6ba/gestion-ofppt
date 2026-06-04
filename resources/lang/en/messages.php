@@ -175,6 +175,9 @@ return [
         'secure_qr' => 'Secure QR login', 'information' => 'Information',
         'cni_note_title' => 'CNI', 'cni_note_text' => 'Your CNI appears on your profile and administrative requests.',
         'edit_profile' => 'Edit profile',
+        'download_as_seen' => 'Download badge',
+        'preparing_download' => 'Preparing...',
+        'download_error' => 'Unable to download the badge. Try again after the page fully loads.',
     ],
     'profile' => [
         'title' => 'Profile', 'attendance_history' => 'Attendance history', 'edit_cni' => 'Edit CNI',

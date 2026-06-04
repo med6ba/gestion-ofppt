@@ -22,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
     {
         app('translator')->getLoader()->addPath(resource_path('lang'));
 
+        \Illuminate\Support\Facades\Gate::define('update-settings', function ($user) {
+            return $user->isDirecteur();
+        });
+
         View::composer('*', function ($view) {
             $user = auth()->user();
 

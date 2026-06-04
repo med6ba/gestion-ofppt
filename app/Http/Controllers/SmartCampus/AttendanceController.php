@@ -174,7 +174,9 @@ class AttendanceController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        return back()->with('status', 'QR attendance started. Rotation active toutes les 2 secondes.');
+        $refreshInterval = \App\Models\Setting::get('qr_refresh_interval', 15);
+
+        return back()->with('status', 'QR attendance started. Rotation active toutes les ' . $refreshInterval . ' secondes.');
     }
 
     public function refreshQr(TimetableSession $session)
@@ -285,7 +287,8 @@ class AttendanceController extends Controller
         $qr = QrAttendanceSession::where('secure_token', $token)->first();
 
         if (!$qr) {
-            return redirect()->route('login')->withErrors(['email' => 'Le QR code a expire (il change toutes les 2 secondes). Veuillez scanner le nouveau code affiche.']);
+            $refreshInterval = \App\Models\Setting::get('qr_refresh_interval', 15);
+            return redirect()->route('login')->withErrors(['email' => 'Le QR code a expire (il change toutes les ' . $refreshInterval . ' secondes). Veuillez scanner le nouveau code affiche.']);
         }
 
         return $this->attemptCheckIn($qr, Attendance::METHOD_QR, $request, $security, $riskScores, $presenceXp);

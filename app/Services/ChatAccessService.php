@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Conversation;
 use App\Models\Group;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
@@ -16,11 +17,10 @@ class ChatAccessService
             ->whereKeyNot($user->id)
             ->where('approval_status', 'approved')
             ->where('enabled', true)
-            ->when($user->isDirecteur(), fn ($query) => $query->whereIn('role', [User::ROLE_SURVEILLANT, User::ROLE_FORMATEUR, User::ROLE_STAGIAIRE]))
-            ->when($user->isSurveillant(), fn ($query) => $query->whereIn('role', [User::ROLE_DIRECTEUR, User::ROLE_FORMATEUR, User::ROLE_STAGIAIRE]))
+            ->when($user->isDirecteur(), fn ($query) => $query->whereIn('role', [User::ROLE_SURVEILLANT, User::ROLE_FORMATEUR]))
+            ->when($user->isSurveillant(), fn ($query) => $query->whereIn('role', [User::ROLE_DIRECTEUR, User::ROLE_FORMATEUR]))
             ->when($user->isFormateur(), function ($query) use ($user) {
                 $groupIds = $user->teachingGroups()->pluck('groups.id');
-
                 $query->where(function ($nested) use ($groupIds) {
                     $nested->whereIn('role', [User::ROLE_DIRECTEUR, User::ROLE_SURVEILLANT])
                         ->orWhere(function ($students) use ($groupIds) {
@@ -29,12 +29,9 @@ class ChatAccessService
                 });
             })
             ->when($user->isStagiaire(), function ($query) use ($user) {
-                $query->where(function ($nested) use ($user) {
-                    $nested->where('role', User::ROLE_SURVEILLANT)
-                        ->orWhere(function ($teachers) use ($user) {
-                            $teachers->where('role', User::ROLE_FORMATEUR)
-                                ->whereHas('teachingGroups', fn ($groups) => $groups->whereKey($user->group_id));
-                        });
+                $query->where(function ($teachers) use ($user) {
+                    $teachers->where('role', User::ROLE_FORMATEUR)
+                        ->whereHas('teachingGroups', fn ($groups) => $groups->whereKey($user->group_id));
                 });
             })
             ->orderBy('role')
@@ -42,31 +39,45 @@ class ChatAccessService
             ->get();
     }
 
+    public function groupConversationsFor(User $user): Collection
+    {
+        return Conversation::query()
+            ->where('type', 'group')
+            ->whereHas('participants', fn ($query) => $query->whereKey($user->id))
+            ->get();
+    }
+
     public function contactSectionsFor(User $user): SupportCollection
     {
         $contacts = $this->contactsFor($user);
 
+        if ($user->isDirecteur()) {
+            return collect([
+                'Administration' => $contacts->filter(fn (User $contact) => $contact->isSurveillant())->values(),
+                'Formateurs' => $contacts->filter(fn (User $contact) => $contact->isFormateur())->values(),
+            ])->filter(fn ($items) => $items->isNotEmpty());
+        }
+
+        if ($user->isSurveillant()) {
+            return collect([
+                'Direction' => $contacts->filter(fn (User $contact) => $contact->isDirecteur())->values(),
+                'Formateurs' => $contacts->filter(fn (User $contact) => $contact->isFormateur())->values(),
+            ])->filter(fn ($items) => $items->isNotEmpty());
+        }
+
         if ($user->isFormateur()) {
             return collect([
                 'Administration' => $contacts->filter(fn (User $contact) => $contact->isDirecteur() || $contact->isSurveillant())->values(),
-                'Stagiaires enseignés' => $contacts->filter(fn (User $contact) => $contact->isStagiaire())->values(),
             ])->filter(fn ($items) => $items->isNotEmpty());
         }
 
         if ($user->isStagiaire()) {
             return collect([
                 'Mes formateurs' => $contacts->filter(fn (User $contact) => $contact->isFormateur())->values(),
-                'Administration' => $contacts->filter(fn (User $contact) => $contact->isSurveillant())->values(),
             ])->filter(fn ($items) => $items->isNotEmpty());
         }
 
-        return $contacts
-            ->groupBy(fn (User $contact) => match ($contact->role) {
-                User::ROLE_DIRECTEUR, User::ROLE_SURVEILLANT => 'Administration',
-                User::ROLE_FORMATEUR => 'Formateurs',
-                User::ROLE_STAGIAIRE => 'Stagiaires',
-                default => 'Autres',
-            });
+        return collect();
     }
 
     public function teachingGroupsFor(User $user): SupportCollection
@@ -97,11 +108,11 @@ class ChatAccessService
         }
 
         if ($sender->isDirecteur()) {
-            return in_array($receiver->role, [User::ROLE_SURVEILLANT, User::ROLE_FORMATEUR, User::ROLE_STAGIAIRE], true);
+            return in_array($receiver->role, [User::ROLE_SURVEILLANT, User::ROLE_FORMATEUR], true);
         }
 
         if ($sender->isSurveillant()) {
-            return in_array($receiver->role, [User::ROLE_DIRECTEUR, User::ROLE_FORMATEUR, User::ROLE_STAGIAIRE], true);
+            return in_array($receiver->role, [User::ROLE_DIRECTEUR, User::ROLE_FORMATEUR], true);
         }
 
         if ($sender->isFormateur()) {
@@ -114,15 +125,27 @@ class ChatAccessService
         }
 
         if ($sender->isStagiaire()) {
-            if ($receiver->isSurveillant()) {
-                return true;
-            }
-
             return $receiver->isFormateur()
                 && $receiver->teachingGroups()->whereKey($sender->group_id)->exists();
         }
 
         return false;
+    }
+
+    public function canMessageInConversation(User $user, Conversation $conversation): bool
+    {
+        if (!$conversation->participants->contains('id', $user->id)) {
+            return false;
+        }
+
+        if ($conversation->type === 'group') {
+            if ($user->isStagiaire()) {
+                return Setting::get('allow_students_reply_in_group_chat', true);
+            }
+            return true; // Formateur can always message in group
+        }
+
+        return true;
     }
 
     public function findOrCreatePrivateConversation(User $sender, User $receiver): Conversation
@@ -143,8 +166,8 @@ class ChatAccessService
         ]);
 
         $conversation->participants()->attach([
-            $sender->id => ['last_read_at' => now()],
-            $receiver->id => ['last_read_at' => null],
+            $sender->id => ['last_read_at' => now(), 'role_in_conversation' => 'participant'],
+            $receiver->id => ['last_read_at' => null, 'role_in_conversation' => 'participant'],
         ]);
 
         return $conversation;

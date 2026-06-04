@@ -449,8 +449,11 @@
                         }
 
                         @if ($qrSession)
+                        @php
+                            $refreshIntervalSeconds = \App\Models\Setting::get('qr_refresh_interval', 15);
+                        @endphp
                         this.interval = setInterval(() => {
-                            this.secondsRemaining = Math.max(0, this.secondsRemaining - 2);
+                            this.secondsRemaining = Math.max(0, this.secondsRemaining - {{ $refreshIntervalSeconds }});
 
                             fetch('{{ route('attendance.qr.refresh', $session) }}', {
                                 method: 'POST',
@@ -488,7 +491,7 @@
                                     this.attempts = data.attempts;
                                 }
                             });
-                        }, 2000);
+                        }, {{ $refreshIntervalSeconds * 1000 }});
                         @endif
                     }
                 }));

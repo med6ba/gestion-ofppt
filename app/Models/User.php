@@ -36,6 +36,8 @@ class User extends Authenticatable
         'badge_id',
         'last_login_at',
         'preferred_locale',
+        'profile_photo',
+        'gender',
     ];
 
     protected $hidden = [
@@ -244,5 +246,14 @@ class User extends Authenticatable
         } while (self::query()->where('badge_id', $badgeId)->exists());
 
         return $badgeId;
+    }
+
+    public function avatarUrl(): ?string
+    {
+        if ($this->profile_photo) {
+            return asset('storage/' . $this->profile_photo);
+        }
+
+        return null;
     }
 }

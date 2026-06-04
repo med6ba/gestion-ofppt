@@ -257,6 +257,9 @@ return [
         'cni_note_title' => 'CNI',
         'cni_note_text' => 'La CNI apparaît sur votre profil et vos demandes administratives.',
         'edit_profile' => 'Modifier le profil',
+        'download_as_seen' => 'Télécharger le badge',
+        'preparing_download' => 'Préparation...',
+        'download_error' => 'Impossible de télécharger le badge. Réessayez après le chargement complet de la page.',
     ],
     'profile' => [
         'title' => 'Profil',

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smart-campus-ofppt-v2';
+const CACHE_NAME = 'smart-campus-ofppt-v3';
 const OFFLINE_URL = '/offline';
 
 self.addEventListener('install', (event) => {

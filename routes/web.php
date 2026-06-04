@@ -14,6 +14,7 @@ use App\Http\Controllers\SmartCampus\ProfileController;
 use App\Http\Controllers\SmartCampus\ResourceController;
 use App\Http\Controllers\SmartCampus\TimetableController;
 use App\Http\Controllers\SmartCampus\UserManagementController;
+use App\Http\Controllers\SmartCampus\SettingsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -153,7 +154,8 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Route::post('/announcements', [AnnouncementController::class, 'store'])
         ->middleware('role:directeur,surveillant')
         ->name('announcements.store');
-    Route::get('/settings', fn () => view('settings.index'))->name('settings.index');
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [SettingsController::class, 'store'])->name('settings.store');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::get('/absence-attachments/{absence}', [AbsenceAuthorizationRequestController::class, 'attachment'])->name('absences.attachment');

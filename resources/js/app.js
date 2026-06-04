@@ -209,6 +209,197 @@ Alpine.data('campusClock', (timezone = 'Africa/Casablanca', initialTime = '--:--
         return zoneName.replace('GMT', 'UTC');
     },
 }));
+Alpine.data('visibleBadgeDownloader', (options = {}) => ({
+    downloading: false,
+    error: '',
+
+    async download() {
+        if (this.downloading) {
+            return;
+        }
+
+        const badge = this.$refs.badge;
+
+        if (!badge) {
+            this.error = options.error || 'Download unavailable.';
+
+            return;
+        }
+
+        this.downloading = true;
+        this.error = '';
+
+        try {
+            if (document.fonts?.ready) {
+                await document.fonts.ready;
+            }
+
+            const svg = await this.renderVisibleSvg(badge);
+
+            try {
+                const canvas = await this.renderSvgToCanvas(svg);
+                this.downloadUrl(canvas.toDataURL('image/png'), options.filename || 'badge.png');
+            } catch {
+                this.downloadBlob(svg.blob, this.svgFilename(options.filename || 'badge.png'));
+            }
+        } catch {
+            this.error = options.error || 'Download unavailable.';
+        } finally {
+            this.downloading = false;
+        }
+    },
+
+    async renderVisibleSvg(element) {
+        const rect = element.getBoundingClientRect();
+        const width = Math.ceil(rect.width);
+        const height = Math.ceil(rect.height);
+        const scale = Math.max(2, window.devicePixelRatio || 1);
+        const clone = element.cloneNode(true);
+
+        clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+        clone.style.margin = '0';
+        clone.style.transform = 'none';
+        clone.style.width = `${width}px`;
+        clone.style.height = `${height}px`;
+        clone.style.maxWidth = 'none';
+
+        await this.inlineImages(element, clone);
+        this.inlineComputedStyles(element, clone);
+
+        const html = new XMLSerializer().serializeToString(clone);
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="${width * scale}" height="${height * scale}" viewBox="0 0 ${width} ${height}">
+                <foreignObject width="100%" height="100%">${html}</foreignObject>
+            </svg>
+        `;
+
+        return {
+            blob: new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }),
+            height,
+            scale,
+            width,
+        };
+    },
+
+    async renderSvgToCanvas(svg) {
+        const url = URL.createObjectURL(svg.blob);
+
+        try {
+            const image = await this.loadImage(url);
+            const canvas = document.createElement('canvas');
+            canvas.width = svg.width * svg.scale;
+            canvas.height = svg.height * svg.scale;
+
+            const context = canvas.getContext('2d');
+            context.scale(svg.scale, svg.scale);
+            context.drawImage(image, 0, 0, svg.width, svg.height);
+
+            return canvas;
+        } finally {
+            URL.revokeObjectURL(url);
+        }
+    },
+
+    inlineComputedStyles(source, target) {
+        const sourceElements = [source, ...source.querySelectorAll('*')];
+        const targetElements = [target, ...target.querySelectorAll('*')];
+
+        sourceElements.forEach((sourceElement, index) => {
+            const targetElement = targetElements[index];
+
+            if (!targetElement) {
+                return;
+            }
+
+            const computed = window.getComputedStyle(sourceElement);
+            const style = Array.from(computed)
+                .map((property) => `${property}:${computed.getPropertyValue(property)};`)
+                .join('');
+
+            targetElement.setAttribute('style', `${style}${targetElement.getAttribute('style') || ''}`);
+        });
+    },
+
+    async inlineImages(source, target) {
+        const sourceImages = Array.from(source.querySelectorAll('img'));
+        const targetImages = Array.from(target.querySelectorAll('img'));
+
+        await Promise.all(
+            sourceImages.map(async (image, index) => {
+                const targetImage = targetImages[index];
+
+                if (!targetImage) {
+                    return;
+                }
+
+                await this.waitForImage(image);
+
+                try {
+                    targetImage.src = await this.imageToDataUrl(image);
+                    targetImage.removeAttribute('srcset');
+                } catch {
+                    targetImage.src = image.currentSrc || image.src;
+                }
+            }),
+        );
+    },
+
+    waitForImage(image) {
+        if (image.complete) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve) => {
+            image.addEventListener('load', resolve, { once: true });
+            image.addEventListener('error', resolve, { once: true });
+        });
+    },
+
+    async imageToDataUrl(image) {
+        if (image.src.startsWith('data:')) {
+            return image.src;
+        }
+
+        const response = await fetch(image.currentSrc || image.src);
+        const blob = await response.blob();
+
+        return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    },
+
+    loadImage(src) {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = reject;
+            image.src = src;
+        });
+    },
+
+    downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+
+        this.downloadUrl(url, filename);
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
+
+    downloadUrl(url, filename) {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = url;
+        document.body.append(link);
+        link.click();
+        link.remove();
+    },
+
+    svgFilename(filename) {
+        return filename.replace(/\.[^.]+$/, '.svg');
+    },
+}));
 Alpine.start();
 
 if ('serviceWorker' in navigator) {

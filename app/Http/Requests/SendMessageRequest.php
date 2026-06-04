@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Models\Setting;
 
 class SendMessageRequest extends FormRequest
 {
@@ -13,8 +14,12 @@ class SendMessageRequest extends FormRequest
 
     public function rules(): array
     {
+        $maxSizeMB = Setting::get('max_chat_attachment_mb', 5);
+        $maxSizeKB = $maxSizeMB * 1024;
+
         return [
-            'body' => ['required', 'string', 'max:4000'],
+            'body' => ['required_without:attachment', 'nullable', 'string', 'max:4000'],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:' . $maxSizeKB],
         ];
     }
 }

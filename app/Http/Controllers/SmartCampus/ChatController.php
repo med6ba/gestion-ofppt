@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Storage;
 
 class ChatController extends Controller
 {
@@ -52,7 +53,7 @@ class ChatController extends Controller
             'contactSections' => $chatAccess->contactSectionsFor(auth()->user()),
             'teachingGroups' => $chatAccess->teachingGroupsFor(auth()->user()),
             'conversations' => $this->conversationList(),
-            'activeConversation' => $conversation->load('participants'),
+            'activeConversation' => $conversation->load('participants', 'group', 'module'),
             'messages' => $conversation->messages()->with('sender')->oldest()->get(),
         ]);
     }
@@ -61,12 +62,24 @@ class ChatController extends Controller
     {
         $this->authorize('send', $conversation);
 
-        $message = Message::create([
+        $data = [
             'conversation_id' => $conversation->id,
             'sender_id' => $request->user()->id,
             'body' => $request->validated('body'),
             'is_read' => false,
-        ]);
+        ];
+
+        if ($request->hasFile('attachment')) {
+            $file = $request->file('attachment');
+            $path = $file->store('chat_attachments', 'public');
+            $type = in_array($file->extension(), ['jpg', 'jpeg', 'png', 'webp']) ? 'image' : 'pdf';
+            
+            $data['attachment_path'] = $path;
+            $data['attachment_type'] = $type;
+            $data['attachment_original_name'] = $file->getClientOriginalName();
+        }
+
+        $message = Message::create($data);
 
         $conversation->update(['last_message_at' => now()]);
         $conversation->participants()
@@ -78,6 +91,9 @@ class ChatController extends Controller
             'sender_id' => $message->sender_id,
             'sender' => $request->user()->name,
             'body' => $message->body,
+            'attachment_url' => $message->attachmentUrl(),
+            'attachment_type' => $message->attachment_type,
+            'attachment_original_name' => $message->attachment_original_name,
             'is_read' => false,
             'created_at' => $message->created_at->format('H:i'),
         ];
@@ -88,14 +104,20 @@ class ChatController extends Controller
             ->whereKeyNot($request->user()->id)
             ->get()
             ->each(fn (User $participant) => $participant->notify(new SmartCampusNotification(
-                'New message',
-                "{$request->user()->name}: ".str($message->body)->limit(90),
+                'Nouveau message' . ($conversation->type === 'group' ? ' dans ' . $conversation->title : ''),
+                "{$request->user()->name}: " . ($message->body ? str($message->body)->limit(90) : 'Pièce jointe'),
                 route('chat.show', $conversation),
                 'message'
             )));
 
         if ($request->wantsJson()) {
-            return response()->json(['message' => $messageData]);
+            return response()->json([
+                'message' => $messageData,
+                'html' => view('chat.partials.message-bubble', [
+                    'message' => $message,
+                    'conversation' => $conversation
+                ])->render()
+            ]);
         }
 
         return back();
@@ -106,12 +128,27 @@ class ChatController extends Controller
         $this->authorize('view', $conversation);
         $this->markRead($conversation);
 
+        if (request('html')) {
+            $messages = $conversation->messages()->with('sender')->oldest()->get();
+            $html = '';
+            foreach ($messages as $message) {
+                $html .= view('chat.partials.message-bubble', [
+                    'message' => $message,
+                    'conversation' => $conversation
+                ])->render();
+            }
+            return response()->json(['html' => $html]);
+        }
+
         return response()->json([
             'messages' => $conversation->messages()->with('sender')->oldest()->get()->map(fn (Message $message) => [
                 'id' => $message->id,
                 'sender_id' => $message->sender_id,
                 'sender' => $message->sender->name,
                 'body' => $message->body,
+                'attachment_url' => $message->attachmentUrl(),
+                'attachment_type' => $message->attachment_type,
+                'attachment_original_name' => $message->attachment_original_name,
                 'is_read' => (bool) $message->is_read,
                 'created_at' => $message->created_at->format('H:i'),
             ]),
@@ -120,16 +157,39 @@ class ChatController extends Controller
 
     private function conversationList()
     {
-        return auth()->user()
-            ->conversations()
-            ->with(['participants', 'messages' => fn ($query) => $query->latest()->take(1)])
+        $query = auth()->user()->conversations()
+            ->with(['participants', 'messages' => fn ($query) => $query->latest()->take(1), 'group', 'module'])
             ->withCount([
-                'messages as unread_messages_count' => fn ($query) => $query
+                'messages as unread_messages_count' => fn ($q) => $q
                     ->where('sender_id', '!=', auth()->id())
                     ->where('is_read', false),
-            ])
-            ->orderByDesc('last_message_at')
-            ->get();
+            ]);
+
+        $filter = request('filter', 'tous');
+        
+        if ($filter === 'formateurs') {
+            $query->withParticipantRole(User::ROLE_FORMATEUR, auth()->id());
+        } elseif ($filter === 'stagiaires') {
+            $query->withParticipantRole(User::ROLE_STAGIAIRE, auth()->id());
+        } elseif ($filter === 'groupes') {
+            $query->where('type', 'group');
+        } elseif ($filter === 'non_lus') {
+            $query->unreadForUser(auth()->id());
+        } elseif ($filter === 'lus') {
+            $query->readForUser(auth()->id());
+        }
+
+        $search = request('search');
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhereHas('group', fn ($g) => $g->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%"))
+                  ->orWhereHas('module', fn ($m) => $m->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('participants', fn ($p) => $p->where('users.id', '!=', auth()->id())->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        return $query->orderByDesc('last_message_at')->get();
     }
 
     private function markRead(Conversation $conversation): void

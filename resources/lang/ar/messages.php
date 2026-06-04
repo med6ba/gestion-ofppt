@@ -175,6 +175,9 @@ return [
         'secure_qr' => 'دخول آمن بواسطة QR', 'information' => 'معلومات',
         'cni_note_title' => 'البطاقة الوطنية', 'cni_note_text' => 'تظهر البطاقة الوطنية في ملفك الشخصي وطلباتك الإدارية.',
         'edit_profile' => 'تعديل الملف الشخصي',
+        'download_as_seen' => 'تحميل الشارة',
+        'preparing_download' => 'جاري التحضير...',
+        'download_error' => 'تعذر تحميل الشارة. حاول مرة أخرى بعد اكتمال تحميل الصفحة.',
     ],
     'profile' => [
         'title' => 'الملف الشخصي', 'attendance_history' => 'سجل الحضور', 'edit_cni' => 'تعديل رقم البطاقة',

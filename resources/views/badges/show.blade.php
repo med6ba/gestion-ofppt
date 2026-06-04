@@ -1,16 +1,23 @@
 <x-layouts.app :title="__('messages.badge.title')">
     <div class="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" x-data="visibleBadgeDownloader({
+            filename: @js('badge-'.$stagiaire->id.'.png'),
+            error: @js(__('messages.badge.download_error')),
+        })">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h2 class="text-xl font-black text-slate-800">{{ __('messages.badge.heading') }}</h2>
                     <p class="mt-1 text-sm text-slate-500">{{ __('messages.badge.subtitle') }}</p>
                 </div>
-                <a href="{{ route('stagiaire.badge.pdf') }}" class="sc-btn sc-btn-primary">{{ __('messages.common.download_pdf') }}</a>
+                <button type="button" class="sc-btn sc-btn-primary" @click="download()" :disabled="downloading" :class="downloading && 'opacity-70'">
+                    <span x-show="!downloading">{{ __('messages.badge.download_as_seen') }}</span>
+                    <span x-show="downloading" x-cloak>{{ __('messages.badge.preparing_download') }}</span>
+                </button>
             </div>
+            <p class="mt-3 text-sm font-semibold text-rose-700" x-show="error" x-text="error" x-cloak></p>
 
             <div class="mt-6 overflow-x-auto pb-2">
-                <div class="mx-auto grid min-h-[360px] max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl md:grid-cols-[260px_1fr]">
+                <div x-ref="badge" class="mx-auto grid min-h-[360px] max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl md:grid-cols-[260px_1fr]">
                     <div class="relative flex flex-col bg-slate-950 p-6 text-white">
                         <div class="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-campus-500 via-ofppt-grey to-primary"></div>
                         <div class="flex items-center gap-3">
