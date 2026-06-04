@@ -17,7 +17,7 @@
     $clockOffset = 'UTC'.($clockOffsetMinutes >= 0 ? '+' : '-').$clockOffsetHours.($clockOffsetRemainder ? ':'.str_pad((string) $clockOffsetRemainder, 2, '0', STR_PAD_LEFT) : '');
 @endphp
 <!doctype html>
-<html lang="fr">
+<html lang="{{ $currentLocale ?? app()->getLocale() }}" dir="{{ $textDirection ?? 'ltr' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -28,7 +28,7 @@
     <link rel="icon" href="{{ asset('logo/ofppt-logo.png') }}" type="image/png">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="text-slate-700 antialiased">
+<body class="text-slate-700 antialiased {{ ($textDirection ?? 'ltr') === 'rtl' ? 'rtl' : 'ltr' }}">
     <div
         class="manar-shell"
         x-data="{
@@ -101,15 +101,16 @@
             </nav>
 
             <div class="manar-sidebar-footer shrink-0">
-                <button class="logout-button sc-btn sc-btn-secondary w-full mb-3 hidden lg:flex items-center" style="gap: 0.5rem;" @click="sidebarCollapsed = !sidebarCollapsed" type="button" aria-label="Réduire le menu">
+                <x-language-switcher class="mb-3 px-1 md:hidden" />
+                <button class="logout-button sc-btn sc-btn-secondary w-full mb-3 hidden lg:flex items-center" style="gap: 0.5rem;" @click="sidebarCollapsed = !sidebarCollapsed" type="button" aria-label="{{ __('messages.nav.collapse_menu') }}">
                     <svg class="size-4 shrink-0 transition-transform duration-300" :class="sidebarCollapsed ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
-                    <span class="menu-text">Réduire le menu</span>
+                    <span class="menu-text">{{ __('messages.nav.collapse_menu') }}</span>
                 </button>
                 <form method="POST" action="{{ route('logout') }}" class="mt-3">
                     @csrf
-                    <button class="logout-button sc-btn sc-btn-secondary w-full" title="Logout">
+                    <button class="logout-button sc-btn sc-btn-secondary w-full" title="{{ __('messages.common.logout') }}">
                         <x-ui.icon name="logout" size="size-4" />
-                        <span class="menu-text">Logout</span>
+                        <span class="menu-text">{{ __('messages.common.logout') }}</span>
                     </button>
                 </form>
             </div>
@@ -120,7 +121,7 @@
         <div class="manar-main">
             <header class="manar-header flex items-center justify-between">
                 <div class="flex min-w-0 items-center gap-3">
-                    <button class="menu-toggle lg:hidden" :class="{ 'active': sidebarOpen }" @click="sidebarOpen = !sidebarOpen" type="button" aria-label="Open menu">
+                    <button class="menu-toggle lg:hidden" :class="{ 'active': sidebarOpen }" @click="sidebarOpen = !sidebarOpen" type="button" aria-label="{{ __('messages.nav.open_menu') }}">
                         <span></span><span></span><span></span>
                     </button>
                     <div class="min-w-0">
@@ -137,6 +138,8 @@
                 </div>
 
                 <div class="flex items-center gap-1 sm:gap-3">
+                    <x-language-switcher class="hidden md:flex" />
+
                     <a href="{{ route('notifications.index') }}" class="manar-icon-btn relative" aria-label="Notifications">
                         @if ($unreadCount ?? 0)
                             <span class="bell-dot"></span>
@@ -153,7 +156,7 @@
 
                     <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">
                         @csrf
-                        <button class="manar-icon-btn" title="Logout">
+                        <button class="manar-icon-btn" title="{{ __('messages.common.logout') }}">
                             <x-ui.icon name="logout" />
                         </button>
                     </form>

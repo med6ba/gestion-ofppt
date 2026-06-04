@@ -17,8 +17,8 @@ Build an innovative Smart Campus solution for one OFPPT establishment. The app m
 ## Authentication Module
 
 - One unified login portal for Directeur, Surveillant General, Formateur, and Stagiaire.
-- Passkey/biometric access is presented first through the `Continue with Passkey` action.
-- Email/password remains available as fallback.
+- QR badge login is available for approved stagiaires.
+- Email/password remains available for all roles.
 - Directeur creates Surveillant General and Formateur accounts.
 - Stagiaire self-registers and starts as pending.
 - Pending stagiaire sees: `Your account is waiting for approval.`

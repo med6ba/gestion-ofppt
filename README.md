@@ -4,9 +4,11 @@ Smart Campus OFPPT is a focused Laravel web app for one OFPPT establishment. It 
 
 ## Features
 
-- Passkey-first login architecture with email/password fallback.
+- Permanent stagiaire QR badge login with email/password fallback.
 - Four roles only: Directeur, Surveillant General, Formateur, Stagiaire.
 - Stagiaire self-registration with pending approval.
+- Required stagiaire CNI tracking for badges and administrative documents.
+- Attestation de scolarite and autorisation d'absence request workflows.
 - Timetable management with room, group, and formateur conflict detection.
 - Manual attendance plus QR/code attendance with IP range validation and suspicious attempt reporting.
 - Suspicious attendance attempt logging.
@@ -48,6 +50,14 @@ All demo passwords are `password`.
 
 ## Main Workflows
 
+Badge and documents:
+
+1. Stagiaire registers with CNI and group.
+2. Approval generates a permanent badge ID and QR login token.
+3. Stagiaire opens My Badge to preview or download the badge PDF.
+4. Stagiaire submits attestation or absence requests from the dashboard.
+5. Surveillant General approves or rejects requests and the stagiaire receives a dashboard/mail notification.
+
 Attendance:
 
 1. Formateur opens Attendance.
@@ -81,10 +91,24 @@ CampusAI:
 
 The provided Smart Campus PDFs are now reflected in the app:
 
-- Authentication PDF: unified portal, passkey priority button, role redirects, pending stagiaire approval message, RBAC.
+- Authentication PDF: unified portal, QR badge login, role redirects, pending stagiaire approval message, RBAC.
 - Attendance PDF: manual marking, QR token, fallback code, campus IP verification, suspicious attempts, repeated absence reporting.
 - Chat PDF: role-based contacts, secure 403 checks, unread counters, message history, responsive chat UI, polling fallback for local demo.
 - Hackathon PDF: demo-ready dashboard, local port `9999`, documentation, pitch flow, and mobile/PWA support.
+
+## Mail Configuration
+
+Mail defaults to the `log` mailer so local demos do not crash when SMTP is missing. To send real emails, set:
+
+```bash
+MAIL_MAILER=smtp
+MAIL_HOST=your-smtp-host
+MAIL_PORT=587
+MAIL_USERNAME=your-username
+MAIL_PASSWORD=your-password
+MAIL_FROM_ADDRESS=noreply@ofppt.ma
+MAIL_FROM_NAME="Smart Campus OFPPT"
+```
 
 ## Legacy Cleanup
 

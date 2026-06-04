@@ -15,7 +15,10 @@
 - `conversation_participants`: authorized conversation users and per-user `last_read_at` state.
 - `messages`: escaped chat message history with `is_read` for private unread badges.
 - `risk_scores`: calculated stagiaire risk indicators.
-- `passkeys`: passkey-ready credential storage.
+- `users.cni`, `users.qr_login_token`, `users.badge_id`: stagiaire identity and permanent badge login credentials.
+- `attestation_requests`: attestation de scolarite workflow.
+- `absence_authorization_requests`: autorisation d'absence workflow.
+- `passkeys`: legacy reserved credential storage, not exposed in the current login flow.
 - `notifications`: Laravel database notifications.
 
 ## Key Relationships
@@ -31,7 +34,7 @@
 ## Business Rules
 
 - Exactly four roles are supported: `directeur`, `surveillant`, `formateur`, `stagiaire`.
-- Login is passkey-first in the UI, while email/password remains the stable fallback.
+- Login supports email/password for all roles and permanent QR badge login for approved stagiaires.
 - Self-registered stagiaires default to `pending` and cannot access the app.
 - Directeur and Surveillant General can approve or reject stagiaires.
 - Directeur can create Surveillant General and Formateur accounts.

@@ -45,13 +45,13 @@ class SmartCampusNotification extends Notification
     {
         $message = (new MailMessage)
             ->subject($this->title)
-            ->greeting('Bonjour '.$notifiable->name.',')
+            ->greeting(__('messages.mail.greeting', ['name' => $notifiable->name]))
             ->line($this->body);
 
         if ($this->url) {
-            $message->action('Voir l\'emploi du temps', $this->url);
+            $message->action(__('messages.mail.action'), $this->url);
         }
 
-        return $message->line('Smart Campus OFPPT');
+        return $message->line(__('messages.mail.footer'));
     }
 }

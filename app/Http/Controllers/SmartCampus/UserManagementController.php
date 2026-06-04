@@ -8,6 +8,7 @@ use App\Models\Group;
 use App\Models\User;
 use App\Notifications\SmartCampusNotification;
 use App\Services\RiskScoreService;
+use App\Services\SafeNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -82,18 +83,20 @@ class UserManagementController extends Controller
         return back()->with('status', 'Staff account created.');
     }
 
-    public function approve(User $user, RiskScoreService $riskScoreService): RedirectResponse
+    public function approve(User $user, RiskScoreService $riskScoreService, SafeNotificationService $notifier): RedirectResponse
     {
         abort_unless($user->isStagiaire(), 404);
 
+        $user->ensureBadgeCredentials();
         $user->update(['approval_status' => 'approved']);
         $riskScoreService->updateFor($user);
 
-        $user->notify(new SmartCampusNotification(
-            'Registration approved',
-            'Your Smart Campus OFPPT account has been approved.',
+        $notifier->send($user, new SmartCampusNotification(
+            __('messages.mail.approval_title'),
+            __('messages.mail.approval_body', ['email' => $user->email]),
             route('stagiaire.dashboard'),
-            'approval'
+            'approval',
+            sendMail: true
         ));
 
         return back()->with('status', "{$user->name} approved.");

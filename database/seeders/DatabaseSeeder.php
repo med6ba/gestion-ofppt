@@ -103,6 +103,7 @@ class DatabaseSeeder extends Seeder
             'role' => User::ROLE_STAGIAIRE,
             'group_id' => $groupDev->id,
             'registration_number' => 'STG-001',
+            'cni' => 'BE100001',
             'approval_status' => 'approved',
         ]);
 
@@ -113,6 +114,7 @@ class DatabaseSeeder extends Seeder
             'role' => User::ROLE_STAGIAIRE,
             'group_id' => $groupDev->id,
             'registration_number' => 'STG-002',
+            'cni' => 'BE100002',
             'approval_status' => 'pending',
         ]);
 
@@ -123,6 +125,7 @@ class DatabaseSeeder extends Seeder
             'role' => User::ROLE_STAGIAIRE,
             'group_id' => $groupDev->id,
             'registration_number' => 'STG-003',
+            'cni' => 'BE100003',
             'approval_status' => 'approved',
         ]);
 
@@ -133,6 +136,7 @@ class DatabaseSeeder extends Seeder
             'role' => User::ROLE_STAGIAIRE,
             'group_id' => $groupInfra->id,
             'registration_number' => 'STG-004',
+            'cni' => 'BE100004',
             'approval_status' => 'approved',
         ]);
 

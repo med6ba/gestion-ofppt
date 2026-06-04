@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\SmartCampus\AbsenceAuthorizationRequestController;
 use App\Http\Controllers\SmartCampus\AiAssistantController;
+use App\Http\Controllers\SmartCampus\AttestationRequestController;
 use App\Http\Controllers\SmartCampus\AttendanceController;
 use App\Http\Controllers\SmartCampus\AuthController;
+use App\Http\Controllers\SmartCampus\BadgeController;
 use App\Http\Controllers\SmartCampus\ChatController;
 use App\Http\Controllers\SmartCampus\DashboardController;
 use App\Http\Controllers\SmartCampus\NotificationController;
@@ -13,12 +16,20 @@ use App\Http\Controllers\SmartCampus\UserManagementController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard.redirect') : redirect()->route('login'));
+Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard.redirect') : view('landing'))->name('landing');
+Route::get('/qr-login/{token}', [AuthController::class, 'qrLogin'])->name('auth.qr-login');
+Route::get('/lang/{locale}', function (string $locale, Request $request) {
+    abort_unless(in_array($locale, config('app.supported_locales', ['fr', 'ar', 'en']), true), 404);
+
+    session(['locale' => $locale]);
+    app()->setLocale($locale);
+
+    return redirect()->back();
+})->name('lang.switch');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.store');
-    Route::post('/passkey/start', [AuthController::class, 'passkeyStart'])->name('passkey.start');
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->name('register.store');
     Route::get('/approval-pending', [AuthController::class, 'pending'])->name('approval.pending');
@@ -44,6 +55,9 @@ Route::middleware(['auth', 'approved'])->group(function () {
 
     Route::get('/profile/{user}', [ProfileController::class, 'show'])
         ->name('profile.show');
+    Route::put('/profile/{user}', [ProfileController::class, 'update'])
+        ->name('profile.update');
+    Route::get('/attestations/{attestation}/pdf', [AttestationRequestController::class, 'download'])->name('attestations.pdf');
 
     Route::middleware('role:directeur,surveillant')->group(function () {
         Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
@@ -51,6 +65,14 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::post('/stagiaires/{user}/reject', [UserManagementController::class, 'reject'])->name('stagiaires.reject');
         Route::get('/attendance/reports', [AttendanceController::class, 'reports'])->name('attendance.reports');
         Route::post('/attendance/settings', [AttendanceController::class, 'updateSettings'])->name('attendance.settings.update');
+
+        Route::get('/requests/attestations', [AttestationRequestController::class, 'manage'])->name('attestations.manage');
+        Route::post('/requests/attestations/{attestation}/approve', [AttestationRequestController::class, 'approve'])->name('attestations.approve');
+        Route::post('/requests/attestations/{attestation}/reject', [AttestationRequestController::class, 'reject'])->name('attestations.reject');
+
+        Route::get('/requests/absences', [AbsenceAuthorizationRequestController::class, 'manage'])->name('absences.manage');
+        Route::post('/requests/absences/{absence}/approve', [AbsenceAuthorizationRequestController::class, 'approve'])->name('absences.approve');
+        Route::post('/requests/absences/{absence}/reject', [AbsenceAuthorizationRequestController::class, 'reject'])->name('absences.reject');
     });
 
     Route::middleware('role:directeur')->group(function () {
@@ -103,7 +125,13 @@ Route::middleware(['auth', 'approved'])->group(function () {
     });
 
     Route::middleware('role:stagiaire')->group(function () {
+        Route::get('/stagiaire/badge', [BadgeController::class, 'show'])->name('stagiaire.badge');
+        Route::get('/stagiaire/badge/pdf', [BadgeController::class, 'download'])->name('stagiaire.badge.pdf');
         Route::get('/stagiaire/modules', [DashboardController::class, 'stagiaireModules'])->name('stagiaire.modules');
+        Route::get('/stagiaire/attestations', [AttestationRequestController::class, 'index'])->name('attestations.index');
+        Route::post('/stagiaire/attestations', [AttestationRequestController::class, 'store'])->name('attestations.store');
+        Route::get('/stagiaire/absences', [AbsenceAuthorizationRequestController::class, 'index'])->name('absences.index');
+        Route::post('/stagiaire/absences', [AbsenceAuthorizationRequestController::class, 'store'])->name('absences.store');
         Route::get('/attendance/me', [AttendanceController::class, 'mine'])->name('attendance.mine');
         Route::get('/attendance/check-in', [AttendanceController::class, 'checkIn'])->name('attendance.check-in');
         Route::get('/attendance/scan/{token}', [AttendanceController::class, 'scan'])->name('attendance.scan');
@@ -119,6 +147,7 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Route::get('/settings', fn () => view('settings.index'))->name('settings.index');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::get('/absence-attachments/{absence}', [AbsenceAuthorizationRequestController::class, 'attachment'])->name('absences.attachment');
 
     Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
     Route::post('/chat/conversations', [ChatController::class, 'start'])->name('chat.start');

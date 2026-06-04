@@ -19,6 +19,7 @@ class RegisterStagiaireRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:40'],
             'registration_number' => ['nullable', 'string', 'max:80'],
+            'cni' => ['required', 'string', 'max:40', 'unique:users,cni'],
             'group_id' => ['required', 'exists:groups,id'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ];

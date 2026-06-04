@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
@@ -30,6 +31,9 @@ class User extends Authenticatable
         'enabled',
         'phone', 'device_id',
         'registration_number',
+        'cni',
+        'qr_login_token',
+        'badge_id',
         'last_login_at',
     ];
 
@@ -46,6 +50,18 @@ class User extends Authenticatable
             'enabled' => 'boolean',
             'last_login_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            if ($user->role !== self::ROLE_STAGIAIRE) {
+                return;
+            }
+
+            $user->qr_login_token ??= self::newUniqueQrLoginToken();
+            $user->badge_id ??= self::newUniqueBadgeId();
+        });
     }
 
     public function group(): BelongsTo
@@ -113,6 +129,42 @@ class User extends Authenticatable
         return $this->hasMany(Passkey::class);
     }
 
+    public function attestationRequests(): HasMany
+    {
+        return $this->hasMany(AttestationRequest::class, 'stagiaire_id');
+    }
+
+    public function absenceAuthorizationRequests(): HasMany
+    {
+        return $this->hasMany(AbsenceAuthorizationRequest::class, 'stagiaire_id');
+    }
+
+    public function ensureBadgeCredentials(): void
+    {
+        if (!$this->isStagiaire()) {
+            return;
+        }
+
+        $updates = [];
+
+        if (blank($this->qr_login_token)) {
+            $updates['qr_login_token'] = self::newUniqueQrLoginToken();
+        }
+
+        if (blank($this->badge_id)) {
+            $updates['badge_id'] = self::newUniqueBadgeId();
+        }
+
+        if ($updates) {
+            $this->forceFill($updates)->saveQuietly();
+        }
+    }
+
+    public function filiereName(): string
+    {
+        return $this->group?->filiere?->name ?? 'Non renseignee';
+    }
+
     public function hasRole(string|array $roles): bool
     {
         return in_array($this->role, (array) $roles, true);
@@ -173,5 +225,23 @@ class User extends Authenticatable
     public function scopeApproved($query)
     {
         return $query->where('approval_status', 'approved');
+    }
+
+    private static function newUniqueQrLoginToken(): string
+    {
+        do {
+            $token = Str::random(64);
+        } while (self::query()->where('qr_login_token', $token)->exists());
+
+        return $token;
+    }
+
+    private static function newUniqueBadgeId(): string
+    {
+        do {
+            $badgeId = 'SC-OFPPT-'.Str::upper(Str::random(10));
+        } while (self::query()->where('badge_id', $badgeId)->exists());
+
+        return $badgeId;
     }
 }

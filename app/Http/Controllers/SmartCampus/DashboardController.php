@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\SmartCampus;
 
 use App\Http\Controllers\Controller;
+use App\Models\AbsenceAuthorizationRequest;
+use App\Models\AttestationRequest;
 use App\Models\Attendance;
 use App\Models\AttendanceAuditLog;
 use App\Models\AttendanceAttempt;
@@ -62,6 +64,8 @@ class DashboardController extends Controller
 
         return view('dashboards.surveillant', [
             'pendingStagiaires' => User::role(User::ROLE_STAGIAIRE)->where('approval_status', 'pending')->count(),
+            'pendingAttestations' => AttestationRequest::where('status', AttestationRequest::STATUS_PENDING)->count(),
+            'pendingAbsences' => AbsenceAuthorizationRequest::where('status', AbsenceAuthorizationRequest::STATUS_PENDING)->count(),
             'riskScores' => RiskScore::with('stagiaire.group')->orderByDesc('score')->take(8)->get(),
             'topProfiles' => StudentPresenceProfile::with('stagiaire.group')->orderByDesc('xp_points')->take(6)->get(),
             'severeLateQueue' => Attendance::with(['stagiaire.group', 'session.module', 'session.formateur'])
@@ -199,6 +203,8 @@ class DashboardController extends Controller
             'riskScore' => $riskScore,
             'presenceProfile' => $presenceProfile,
             'activeLateWindows' => $activeLateWindows,
+            'latestAttestations' => $user->attestationRequests()->latest()->take(3)->get(),
+            'latestAbsenceRequests' => $user->absenceAuthorizationRequests()->latest()->take(3)->get(),
             'unreadMessages' => $this->unreadConversationCount($user),
         ]);
     }

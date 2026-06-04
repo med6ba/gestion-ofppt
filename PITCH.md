@@ -26,7 +26,7 @@ Smart Campus OFPPT centralizes daily campus operations in one Laravel applicatio
 - Suspicious attempts are logged for administrative review without automatic punishment.
 - Risk score combines absences, late arrivals, suspicious attempts, and attendance rate.
 - Room occupancy helps improve room allocation.
-- Passkey-first authentication prepares the app for biometric access without breaking email/password fallback.
+- Permanent QR badge login gives stagiaires fast access without exposing passwords.
 - CampusAI answers from role-scoped Smart Campus data only.
 
 ## Demo Flow

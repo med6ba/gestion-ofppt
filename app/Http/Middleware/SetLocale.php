@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Support\Facades\App;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -15,16 +16,18 @@ class SetLocale
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = $request->get('lang', session('locale', config('app.locale')));
+        $supportedLocales = config('app.supported_locales', ['fr', 'ar', 'en']);
+        $locale = session('locale', config('app.locale', 'fr'));
 
-        if (in_array($locale, ['fr', 'ar', 'en', 'es', 'nl'])) {
-            app()->setLocale($locale);
-            session(['locale' => $locale]);
-
-            // Set RTL direction for Arabic
-            $direction = in_array($locale, ['ar']) ? 'rtl' : 'ltr';
-            session(['direction' => $direction]);
+        if (!in_array($locale, $supportedLocales, true)) {
+            $locale = config('app.locale', 'fr');
         }
+
+        App::setLocale($locale);
+        session([
+            'locale' => $locale,
+            'direction' => $locale === 'ar' ? 'rtl' : 'ltr',
+        ]);
 
         return $next($request);
     }
