@@ -16,8 +16,10 @@ class Message extends Model
         'body',
         'is_read',
         'attachment_path',
-        'attachment_type',
+        'attachment_category',
         'attachment_original_name',
+        'attachment_mime_type',
+        'attachment_size',
     ];
 
     public function conversation(): BelongsTo

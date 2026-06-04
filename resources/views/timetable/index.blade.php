@@ -535,19 +535,20 @@
             this.submitting = true;
             this.formErrors = [];
             try {
-                const res = await fetch('{{ route("timetable.weekly.store") }}', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-                    body: JSON.stringify(this.createForm),
+                const res = await axios.post('{{ route("timetable.weekly.store") }}', this.createForm, {
+                    headers: { 'Accept': 'application/json' }
                 });
-                const data = await res.json();
+                const data = res.data;
                 if (data.success) {
                     window.location.href = data.redirect;
-                } else {
-                    this.formErrors = data.errors ? (Array.isArray(data.errors) ? data.errors : Object.values(data.errors).flat()) : ['Erreur inconnue.'];
                 }
-            } catch (e) {
-                this.formErrors = ['Erreur réseau.'];
+            } catch (err) {
+                const response = err.response;
+                if (response && response.status === 422) {
+                    this.formErrors = Object.values(response.data.errors || {}).flat();
+                } else {
+                    this.formErrors = [(response && response.data && response.data.message) || 'Une erreur est survenue'];
+                }
             }
             this.submitting = false;
         },
@@ -556,23 +557,24 @@
             this.submitting = true;
             this.formErrors = [];
             try {
-                const res = await fetch('{{ route("timetable.sessions.store") }}', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-                    body: JSON.stringify(this.sessionForm),
+                const res = await axios.post('{{ route("timetable.sessions.store") }}', this.sessionForm, {
+                    headers: { 'Accept': 'application/json' }
                 });
-                const data = await res.json();
+                const data = res.data;
                 if (data.success) {
                     if (data.redirect) {
                         window.location.href = data.redirect;
                     } else {
                         window.location.reload();
                     }
-                } else {
-                    this.formErrors = data.errors ? (Array.isArray(data.errors) ? data.errors : Object.values(data.errors).flat()) : ['Erreur inconnue.'];
                 }
-            } catch (e) {
-                this.formErrors = ['Erreur réseau.'];
+            } catch (err) {
+                const response = err.response;
+                if (response && response.status === 422) {
+                    this.formErrors = Object.values(response.data.errors || {}).flat();
+                } else {
+                    this.formErrors = [(response && response.data && response.data.message) || 'Une erreur est survenue'];
+                }
             }
             this.submitting = false;
         },
@@ -581,19 +583,20 @@
             this.submitting = true;
             this.formErrors = [];
             try {
-                const res = await fetch(`/timetable/sessions/${this.editingSessionId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-                    body: JSON.stringify(this.editForm),
+                const res = await axios.put(`/timetable/sessions/${this.editingSessionId}`, this.editForm, {
+                    headers: { 'Accept': 'application/json' }
                 });
-                const data = await res.json();
+                const data = res.data;
                 if (data.success) {
                     window.location.reload();
-                } else {
-                    this.formErrors = data.errors ? (Array.isArray(data.errors) ? data.errors : Object.values(data.errors).flat()) : ['Erreur inconnue.'];
                 }
-            } catch (e) {
-                this.formErrors = ['Erreur réseau.'];
+            } catch (err) {
+                const response = err.response;
+                if (response && response.status === 422) {
+                    this.formErrors = Object.values(response.data.errors || {}).flat();
+                } else {
+                    this.formErrors = [(response && response.data && response.data.message) || 'Une erreur est survenue'];
+                }
             }
             this.submitting = false;
         },
@@ -601,16 +604,16 @@
         async submitDeleteSession() {
             this.submitting = true;
             try {
-                const res = await fetch(`/timetable/sessions/${this.deleteSessionId}`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-                    body: JSON.stringify({ reason: this.deleteReason }),
+                const res = await axios.delete(`/timetable/sessions/${this.deleteSessionId}`, {
+                    data: { reason: this.deleteReason },
+                    headers: { 'Accept': 'application/json' }
                 });
-                const data = await res.json();
-                if (data.success) {
+                if (res.data.success) {
                     window.location.reload();
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error(e);
+            }
             this.submitting = false;
         },
     }));

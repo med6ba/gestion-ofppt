@@ -17,7 +17,11 @@ class StoreManualAttendanceRequest extends FormRequest
     {
         return [
             'attendance' => ['required', 'array'],
-            'attendance.*' => ['required', Rule::in(Attendance::statuses())],
+            'attendance.*' => ['required', Rule::in([
+                Attendance::STATUS_PRESENT,
+                Attendance::STATUS_ABSENT,
+                Attendance::STATUS_LATE_VALIDATED,
+            ])],
         ];
     }
 }

@@ -23,7 +23,7 @@
         $riskReasons = $riskScore->reasons ?: [__('messages.dashboard.no_risk_signals')];
     @endphp
 
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <div class="sc-card p-5">
             <div class="text-sm font-medium text-slate-500">{{ __('messages.dashboard.presence_xp') }}</div>
             <div class="mt-3 text-3xl font-bold">{{ $presenceProfile->xp_points }}</div>
@@ -41,6 +41,15 @@
             <div class="text-sm font-medium text-slate-500">{{ __('messages.dashboard.my_progress') }}</div>
             <div class="mt-3 text-3xl font-bold">{{ $presenceProfile->attendance_streak }}</div>
         </a>
+        <div class="sc-card p-5 border-l-4 {{ (auth()->user()->behaviorScore?->score ?? 20) < 10 ? 'border-rose-500' : 'border-emerald-500' }}">
+            <div class="text-sm font-medium text-slate-500">Comportement</div>
+            <div class="mt-3 text-3xl font-bold {{ (auth()->user()->behaviorScore?->score ?? 20) < 10 ? 'text-rose-600' : 'text-emerald-600' }}">{{ auth()->user()->behaviorScore?->score ?? 20 }}/20</div>
+            @if(auth()->user()->absenceFollowUps()->whereIn('status', ['pending', 'under_review'])->exists())
+                 <div class="mt-1 text-xs font-semibold text-rose-500">Suivi Surveillant requis</div>
+            @else
+                 <div class="mt-1 text-xs font-semibold text-slate-500">Bonne conduite</div>
+            @endif
+        </div>
     </div>
 
     <div class="mt-6 grid gap-4 lg:grid-cols-3">

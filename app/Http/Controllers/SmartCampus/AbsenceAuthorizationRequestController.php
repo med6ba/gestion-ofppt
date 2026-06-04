@@ -19,9 +19,49 @@ class AbsenceAuthorizationRequestController extends Controller
         $stagiaire = $request->user()->load('group.filiere');
         abort_unless($stagiaire->isStagiaire(), 403);
 
+        $now = now();
+        $upcomingSessions = collect();
+        
+        if ($stagiaire->group_id) {
+            $upcomingSessions = \App\Models\TimetableSession::with(['group', 'module', 'room', 'weeklyTimetable'])
+                ->where('group_id', $stagiaire->group_id)
+                ->where('status', '!=', 'cancelled')
+                ->whereDate('ends_on', '>=', $now->toDateString())
+                ->whereHas('weeklyTimetable', fn ($query) => $query->where('status', 'published'))
+                ->orderBy('starts_on')
+                ->orderBy('day_of_week')
+                ->orderBy('starts_at')
+                ->get()
+                ->filter(function (\App\Models\TimetableSession $session) use ($now) {
+                    $sessionDateTime = $session->starts_on
+                        ->copy()
+                        ->addDays($session->day_of_week - 1)
+                        ->setTimeFromTimeString(substr($session->starts_at, 0, 5));
+
+                    return $sessionDateTime->greaterThan($now);
+                })
+                ->take(24)
+                ->values();
+        }
+
+        $pendingRequests = $stagiaire->absenceAuthorizationRequests()
+            ->where('status', \App\Models\AbsenceAuthorizationRequest::STATUS_PENDING)
+            ->get();
+
         return view('absences.index', [
+            'upcomingSessions' => $upcomingSessions,
+            'pendingRequests' => $pendingRequests,
             'requests' => $stagiaire->absenceAuthorizationRequests()->latest()->paginate(10),
             'stagiaire' => $stagiaire,
+            'weekDays' => [
+                1 => 'Lundi',
+                2 => 'Mardi',
+                3 => 'Mercredi',
+                4 => 'Jeudi',
+                5 => 'Vendredi',
+                6 => 'Samedi',
+                7 => 'Dimanche',
+            ],
         ]);
     }
 

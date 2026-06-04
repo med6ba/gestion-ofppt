@@ -191,30 +191,26 @@
                         this.formErrors = [];
 
                         try {
-                            const res = await fetch(`/formateur/timetable/sessions/${this.cancelSessionId}/cancel-request`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                    'Accept': 'application/json',
-                                },
-                                body: JSON.stringify({ reason: this.cancelReason }),
-                            });
-                            const data = await res.json();
+                            const res = await axios.post(`/formateur/timetable/sessions/${this.cancelSessionId}/cancel-request`, 
+                                { reason: this.cancelReason },
+                                { headers: { 'Accept': 'application/json' } }
+                            );
+                            const data = res.data;
 
                             if (data.success) {
                                 window.location.reload();
                                 return;
                             }
-
-                            this.formErrors = data.errors
-                                ? (Array.isArray(data.errors) ? data.errors : Object.values(data.errors).flat())
-                                : ['Erreur inconnue.'];
-                        } catch (e) {
-                            this.formErrors = ['Erreur réseau.'];
+                        } catch (err) {
+                            const response = err.response;
+                            if (response && response.status === 422) {
+                                this.formErrors = Object.values(response.data.errors || {}).flat();
+                            } else {
+                                this.formErrors = [(response && response.data && response.data.message) || 'Une erreur est survenue'];
+                            }
+                        } finally {
+                            this.submitting = false;
                         }
-
-                        this.submitting = false;
                     },
                 }));
             });

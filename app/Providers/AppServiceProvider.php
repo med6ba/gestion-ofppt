@@ -29,8 +29,20 @@ class AppServiceProvider extends ServiceProvider
         View::composer('*', function ($view) {
             $user = auth()->user();
 
-            $view->with('unreadNotifications', $user ? $user->unreadNotifications()->take(6)->get() : collect());
-            $view->with('unreadCount', $user ? $user->unreadNotifications()->count() : 0);
+            $unreadNotifications = $user ? $user->unreadNotifications()->take(6)->get() : collect();
+            $unreadCount = $user ? $user->unreadNotifications()->count() : 0;
+            
+            $unreadCountByCategory = collect();
+            if ($user) {
+                $unreadCountByCategory = $user->unreadNotifications()
+                    ->reorder()
+                    ->get(['data'])
+                    ->countBy(fn ($notification) => $notification->data['category'] ?? 'system');
+            }
+
+            $view->with('unreadNotifications', $unreadNotifications);
+            $view->with('unreadCount', $unreadCount);
+            $view->with('unreadCountByCategory', $unreadCountByCategory);
             $view->with('currentLocale', app()->getLocale());
             $view->with('textDirection', app()->getLocale() === 'ar' ? 'rtl' : 'ltr');
         });

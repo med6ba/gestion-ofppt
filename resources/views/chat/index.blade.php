@@ -1,5 +1,23 @@
 <x-layouts.app title="Chat" :collapse-sidebar="true">
-    <div class="flex h-[calc(100vh-80px)] overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200" x-data="{ addContactOpen: false, selectedFile: null }">
+    <div class="flex h-[calc(100vh-80px)] overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200" 
+         x-data="{ 
+            addContactOpen: false, 
+            selectedFile: null,
+            refreshSidebar() {
+                axios.get(window.location.href)
+                    .then(res => {
+                        const doc = new DOMParser().parseFromString(res.data, 'text/html');
+                        const newSidebar = doc.getElementById('chat-sidebar-container');
+                        const currentSidebar = document.getElementById('chat-sidebar-container');
+                        if (newSidebar && currentSidebar) {
+                            currentSidebar.innerHTML = newSidebar.innerHTML;
+                        }
+                    });
+            }
+         }"
+         @notification-received.window="if($event.detail.type === 'message') refreshSidebar()"
+         @message-sent.window="refreshSidebar()"
+    >
         
         <!-- Left Sidebar: Conversations List -->
         @include('chat.partials.conversation-list')

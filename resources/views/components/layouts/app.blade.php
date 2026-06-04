@@ -70,16 +70,47 @@
                     @endphp
 
                     @if ($children->isEmpty())
-                        <a href="{{ $hrefFor($group) }}" class="menu-item {{ $groupActive ? 'active' : '' }}" title="{{ $group['label'] }}" @click="sidebarOpen = false" @if($groupActive) aria-current="page" @endif>
+                        <a href="{{ $hrefFor($group) }}" class="menu-item {{ $groupActive ? 'active' : '' }}" title="{{ $group['label'] }}" @click="sidebarOpen = false" @if($groupActive) aria-current="page" @endif x-data="{ categories: @js($group['categories'] ?? []) }">
                             <span class="menu-icon"><x-ui.icon :name="$group['icon']" /></span>
-                            <span class="menu-text">{{ $group['label'] }}</span>
+                            <span class="menu-text flex-1">{{ $group['label'] }}</span>
+                            
+                            @if(!empty($group['categories']))
+                                @php
+                                    $groupCount = 0;
+                                    foreach ($group['categories'] as $cat) {
+                                        $groupCount += isset($unreadCountByCategory) ? $unreadCountByCategory->get($cat, 0) : 0;
+                                    }
+                                @endphp
+                                <span class="menu-badge menu-text" 
+                                    x-data="{ count: {{ $groupCount }} }" 
+                                    @notification-received.window="if (categories.includes($event.detail.category || 'system')) { count++ }"
+                                    x-show="count > 0" 
+                                    x-cloak
+                                    x-text="count"></span>
+                            @endif
                         </a>
                     @else
-                        <div class="menu-group" x-data="{ label: @js($group['label']) }">
+                        <div class="menu-group" x-data="{ label: @js($group['label']), categories: @js($group['categories'] ?? []) }">
                             <button type="button" class="menu-item w-[calc(100%-0.5rem)] {{ $groupActive ? 'active' : '' }}" title="{{ $group['label'] }}" :aria-expanded="openGroups.includes(label)" @click="sidebarCollapsed ? sidebarCollapsed = false : (openGroups.includes(label) ? openGroups = openGroups.filter(item => item !== label) : openGroups.push(label))">
                                 <span class="menu-icon"><x-ui.icon :name="$group['icon']" /></span>
                                 <span class="menu-text flex-1 text-start">{{ $group['label'] }}</span>
-                                <svg class="menu-text size-4 transition" :class="openGroups.includes(label) && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                
+                                @if(!empty($group['categories']))
+                                    @php
+                                        $groupCount = 0;
+                                        foreach ($group['categories'] as $cat) {
+                                            $groupCount += isset($unreadCountByCategory) ? $unreadCountByCategory->get($cat, 0) : 0;
+                                        }
+                                    @endphp
+                                    <span class="menu-badge mr-2 menu-text" 
+                                        x-data="{ count: {{ $groupCount }} }" 
+                                        @notification-received.window="if (categories.includes($event.detail.category || 'system')) { count++ }"
+                                        x-show="count > 0" 
+                                        x-cloak
+                                        x-text="count"></span>
+                                @endif
+
+                                <svg class="menu-text size-4 transition shrink-0" :class="openGroups.includes(label) && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7" />
                                 </svg>
                             </button>
@@ -91,7 +122,7 @@
                                         <x-ui.icon :name="$item['icon']" size="size-4" class="mr-2 text-slate-400 shrink-0" />
                                         <span>{{ $item['label'] }}</span>
                                         @if (($item['badge'] ?? null) === 'notifications')
-                                            <span class="menu-badge" x-data="{ count: {{ $unreadCount ?? 0 }} }" @notification-received.window="count++" x-show="count > 0" x-text="count"></span>
+                                            <span class="menu-badge" x-data="{ count: {{ $unreadCount ?? 0 }} }" @notification-received.window="count++" x-show="count > 0" x-cloak x-text="count"></span>
                                         @endif
                                     </a>
                                 @endforeach

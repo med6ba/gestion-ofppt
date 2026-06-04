@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use App\Models\SessionCancellation;
+use App\Models\SessionCancellationRequest;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -16,10 +16,10 @@ class SessionCancellationApproved implements ShouldBroadcastNow
     public $cancellation;
     public $groupId;
 
-    public function __construct(SessionCancellation $cancellation)
+    public function __construct(SessionCancellationRequest $cancellation)
     {
         $this->cancellation = $cancellation;
-        $this->groupId = $cancellation->session->group_id;
+        $this->groupId = $cancellation->timetableSession->group_id;
     }
 
     public function broadcastOn(): array

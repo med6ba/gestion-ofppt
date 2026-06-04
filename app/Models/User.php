@@ -105,6 +105,26 @@ class User extends Authenticatable
         return $this->hasMany(AttendanceAttempt::class, 'stagiaire_id');
     }
 
+    public function evaluationsCreated(): HasMany
+    {
+        return $this->hasMany(Evaluation::class, 'created_by');
+    }
+
+    public function evaluationsTaught(): HasMany
+    {
+        return $this->hasMany(Evaluation::class, 'formateur_id');
+    }
+
+    public function grades(): HasMany
+    {
+        return $this->hasMany(StudentGrade::class, 'stagiaire_id');
+    }
+
+    public function gradeSummaries(): HasMany
+    {
+        return $this->hasMany(ModuleGradeSummary::class, 'stagiaire_id');
+    }
+
     public function riskScore(): HasOne
     {
         return $this->hasOne(RiskScore::class, 'stagiaire_id');
@@ -113,6 +133,21 @@ class User extends Authenticatable
     public function presenceProfile(): HasOne
     {
         return $this->hasOne(StudentPresenceProfile::class, 'stagiaire_id');
+    }
+
+    public function behaviorScore(): HasOne
+    {
+        return $this->hasOne(StudentBehaviorScore::class, 'stagiaire_id');
+    }
+
+    public function behaviorScoreLogs(): HasMany
+    {
+        return $this->hasMany(BehaviorScoreLog::class, 'stagiaire_id');
+    }
+
+    public function absenceFollowUps(): HasMany
+    {
+        return $this->hasMany(AbsenceFollowUp::class, 'stagiaire_id');
     }
 
     public function conversations(): BelongsToMany

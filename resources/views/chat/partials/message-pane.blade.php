@@ -109,61 +109,30 @@
                     window.Echo.private('chat.{{ $activeConversation->id }}')
                         .listen('.message.sent', (e) => {
                             // When a message is received from others, fetch the updated messages HTML
-                            fetch("{{ route('chat.messages.index', $activeConversation) }}?html=1", {
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'X-Requested-With': 'XMLHttpRequest'
+                            axios.get("{{ route('chat.messages.index', $activeConversation) }}?html=1", {
+                                headers: { 'Accept': 'application/json' }
+                            })
+                            .then(res => {
+                                if (res.data && res.data.html) {
+                                    container.innerHTML = res.data.html + '<div id="messages-bottom"></div>';
+                                    scrollToBottom();
+                                    window.dispatchEvent(new CustomEvent('message-sent'));
                                 }
                             })
-                            .then(res => res.json())
-                            .then(data => {
-                                if (data.html) {
-                                    // Keep the loading state hidden, just replace all bubbles
-                                    // Actually, replacing everything is safest
-                                    // But we need to keep the dummy bottom element
-                                    container.innerHTML = data.html + '<div id="messages-bottom"></div>';
-                                    scrollToBottom();
-                                }
-                            });
+                            .catch(err => console.error(err));
                         });
                 }
 
-                // Intercept form submission in Alpine for composer
-                document.addEventListener('submit', (e) => {
-                    const form = e.target;
-                    if (form.id === 'chatForm' || form.action.includes('chat/conversations/{{ $activeConversation->id }}/messages')) {
-                        e.preventDefault();
+                window.addEventListener('message-sent', (e) => {
+                    if (e.detail && e.detail.html) {
+                        bottomDummy.insertAdjacentHTML('beforebegin', e.detail.html);
+                        scrollToBottom();
                         
-                        const formData = new FormData(form);
-                        const submitBtn = form.querySelector('button[type="submit"]');
-                        const textarea = form.querySelector('textarea');
-                        
-                        fetch(form.action, {
-                            method: 'POST',
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                            },
-                            body: formData
-                        })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.html) {
-                                // Append new bubble right before the dummy bottom element
-                                bottomDummy.insertAdjacentHTML('beforebegin', data.html);
-                                scrollToBottom();
-                                
-                                // Reset form
-                                form.reset();
-                                textarea.style.height = '';
-                                window.dispatchEvent(new CustomEvent('message-sent'));
-                            }
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            window.dispatchEvent(new CustomEvent('message-sent'));
-                        });
+                        // Remove empty state message if present
+                        const emptyState = container.querySelector('.text-center.text-slate-500');
+                        if (emptyState) {
+                            emptyState.remove();
+                        }
                     }
                 });
             });

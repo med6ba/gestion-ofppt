@@ -60,6 +60,11 @@ class AttendanceController extends Controller
         $qr = $attendanceSession?->activeQrToken ?? $session->activeQrSession;
         $qrDataUri = $qr ? (new QRCode())->render(route('attendance.scan', $qr->secure_token)) : null;
 
+        $activeFollowUps = \App\Models\AbsenceFollowUp::whereIn('stagiaire_id', $session->group->stagiaires->pluck('id'))
+            ->whereIn('status', ['pending', 'under_review'])
+            ->pluck('stagiaire_id')
+            ->toArray();
+
         return view('attendance.show', [
             'session' => $session,
             'attendanceSession' => $attendanceSession,
@@ -78,6 +83,7 @@ class AttendanceController extends Controller
                     ->take(12)
                     ->get()
                 : collect(),
+            'activeFollowUps' => $activeFollowUps,
         ]);
     }
 
@@ -104,6 +110,16 @@ class AttendanceController extends Controller
             $attendance = $this->findAttendanceRecord($attendanceSession, (int) $studentId);
             $oldStatus = $attendance?->status;
 
+            if ($oldStatus === Attendance::STATUS_ABSENT && $status !== Attendance::STATUS_ABSENT) {
+                $hasFollowUp = \App\Models\AbsenceFollowUp::where('stagiaire_id', $studentId)
+                    ->whereIn('status', ['pending', 'under_review'])
+                    ->exists();
+
+                if ($hasFollowUp && !$request->user()->isSurveillant() && !$request->user()->isDirecteur()) {
+                    return back()->withErrors(['attendance' => 'Ce stagiaire doit être traité par le Surveillant Général.']);
+                }
+            }
+
             $attendance = Attendance::query()->updateOrCreate(
                 ['timetable_session_id' => $session->id, 'stagiaire_id' => $studentId],
                 [
@@ -128,7 +144,7 @@ class AttendanceController extends Controller
                 $this->auditAttendance($attendance, $oldStatus, $status, $request->user(), 'Saisie manuelle formateur');
             }
 
-            $this->refreshAttendanceSideEffects($attendance, $riskScores, $presenceXp);
+            $this->refreshAttendanceSideEffects($attendance, $oldStatus, $riskScores, $presenceXp);
         }
 
         return back()->with('status', 'Attendance saved.');
@@ -392,7 +408,7 @@ class AttendanceController extends Controller
                 )));
         }
 
-        $this->refreshAttendanceSideEffects($attendance, $riskScores, $presenceXp);
+        $this->refreshAttendanceSideEffects($attendance, 'pending', $riskScores, $presenceXp);
 
         return redirect()->route('stagiaire.dashboard')->with('status', $message);
     }
@@ -588,6 +604,16 @@ class AttendanceController extends Controller
             $attendance = $this->findAttendanceRecord($attendanceSession, (int) $studentId);
             $oldStatus = $attendance?->status;
 
+            if ($oldStatus === Attendance::STATUS_ABSENT && $data['correction_type'] !== Attendance::STATUS_ABSENT) {
+                $hasFollowUp = \App\Models\AbsenceFollowUp::where('stagiaire_id', $studentId)
+                    ->whereIn('status', ['pending', 'under_review'])
+                    ->exists();
+
+                if ($hasFollowUp && !$request->user()->isSurveillant() && !$request->user()->isDirecteur()) {
+                    continue; // Skip this one quietly for QR bulk corrections
+                }
+            }
+
             $attendance = Attendance::query()->updateOrCreate(
                 ['timetable_session_id' => $session->id, 'stagiaire_id' => $studentId],
                 [
@@ -605,7 +631,7 @@ class AttendanceController extends Controller
             );
 
             $this->auditAttendance($attendance, $oldStatus, $data['correction_type'], $request->user(), $data['reason']);
-            $this->refreshAttendanceSideEffects($attendance, $riskScores, $presenceXp);
+            $this->refreshAttendanceSideEffects($attendance, $oldStatus, $riskScores, $presenceXp);
             $changed++;
         }
 
@@ -663,7 +689,7 @@ class AttendanceController extends Controller
             ]);
 
             $this->auditAttendance($attendance, null, Attendance::STATUS_ABSENT, $request->user(), 'Cloture de seance');
-            $this->refreshAttendanceSideEffects($attendance, $riskScores, $presenceXp);
+            $this->refreshAttendanceSideEffects($attendance, $oldStatus, $riskScores, $presenceXp);
         }
 
         $severeLatePendingCount = $attendanceSession->attendances()
@@ -839,7 +865,7 @@ class AttendanceController extends Controller
             'delay_minutes' => $attendanceSession->delayMinutes(),
         ]);
 
-        $this->refreshAttendanceSideEffects($attendance, $riskScores, $presenceXp);
+        $this->refreshAttendanceSideEffects($attendance, 'pending', $riskScores, $presenceXp);
 
         return redirect()->route('stagiaire.dashboard')->with('status', 'Presence marquee avec succes via QR Code.');
     }
@@ -921,7 +947,7 @@ class AttendanceController extends Controller
         ]);
 
         $this->auditAttendance($attendance, $oldStatus, $newStatus, $actor, $auditReason);
-        $this->refreshAttendanceSideEffects($attendance, $riskScores, $presenceXp);
+        $this->refreshAttendanceSideEffects($attendance, $oldStatus, $riskScores, $presenceXp);
 
         $student = $attendance->stagiaire;
         $student->notify(new SmartCampusNotification(
@@ -938,7 +964,7 @@ class AttendanceController extends Controller
         return $attendance;
     }
 
-    private function refreshAttendanceSideEffects(Attendance $attendance, RiskScoreService $riskScores, PresenceXpService $presenceXp): void
+    private function refreshAttendanceSideEffects(Attendance $attendance, ?string $oldStatus, RiskScoreService $riskScores, PresenceXpService $presenceXp): void
     {
         AttendanceMarked::dispatch($attendance->timetable_session_id, $attendance->stagiaire_id, $attendance->status);
 
@@ -946,6 +972,14 @@ class AttendanceController extends Controller
 
         if (!$student) {
             return;
+        }
+        
+        if ($oldStatus !== $attendance->status) {
+            app(\App\Services\AbsenceFollowUpService::class)->handleAbsenceStatusChange(
+                $attendance, 
+                $oldStatus ?? 'pending', 
+                $attendance->status
+            );
         }
 
         $oldRiskLevel = $student->riskScore?->level;

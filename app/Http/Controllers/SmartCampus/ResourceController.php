@@ -53,9 +53,25 @@ class ResourceController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:40', 'unique:modules,code'],
             'description' => ['nullable', 'string', 'max:1000'],
+            'cc_count' => ['nullable', 'integer', 'in:2,3'],
         ]));
 
         return back()->with('status', 'Module created.');
+    }
+
+    public function updateModuleSettings(Request $request, TrainingModule $module): RedirectResponse
+    {
+        $data = $request->validate([
+            'cc_count' => ['required', 'integer', 'in:2,3'],
+        ]);
+
+        $module->update([
+            'cc_count' => $data['cc_count'],
+            'efm_max_score' => 40,
+            'grade_formula' => 'moy_module = (moy_cc + efm) / 3',
+        ]);
+
+        return back()->with('status', 'Parametres du module mis a jour.');
     }
 
     public function storeRoom(Request $request): RedirectResponse

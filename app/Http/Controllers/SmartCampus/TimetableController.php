@@ -281,11 +281,11 @@ class TimetableController extends Controller
     // ──────────────────────────────────────────────
     // Cancellation Workflow
     // ──────────────────────────────────────────────
-    public function requestCancellation(Request $request, TimetableSession $session): JsonResponse
+    public function requestCancellation(Request $request, TimetableSession $session, \App\Services\SafeNotificationService $notifier): JsonResponse
     {
         $user = auth()->user();
         abort_unless($session->formateur_id === $user->id, 403);
-        abort_if($session->isCancelled(), 422, 'Cette seance est deja annulee.');
+        abort_if($session->isCancelled(), 422, 'Cette séance est déjà annulée.');
 
         // 2-hour rule: calculate exact session datetime using starts_on + day_of_week offset
         $sessionDate = $session->starts_on->copy()->addDays($session->day_of_week - 1);
@@ -294,42 +294,48 @@ class TimetableController extends Controller
         if (now()->diffInMinutes($sessionDateTime, false) < 120) {
             return response()->json([
                 'success' => false,
-                'errors' => ['Vous devez demander l\'annulation au moins 2 heures avant la seance.'],
+                'errors' => ['Vous devez demander l\'annulation au moins 2 heures avant la séance.'],
             ], 422);
         }
 
         if (SessionCancellationRequest::pending()->where('timetable_session_id', $session->id)->where('formateur_id', $user->id)->exists()) {
             return response()->json([
                 'success' => false,
-                'errors' => ['Une demande est deja en attente pour cette seance.'],
+                'errors' => ['Une demande est déjà en attente pour cette séance.'],
             ], 422);
         }
 
         $request->validate(['reason' => ['required', 'string', 'min:10', 'max:1000']]);
 
-        $cancellationRequest = SessionCancellationRequest::create([
-            'timetable_session_id' => $session->id,
-            'formateur_id' => $user->id,
-            'requested_by' => $user->id,
-            'reason' => $request->input('reason'),
-            'status' => 'pending',
-        ]);
+        $cancellationRequest = \Illuminate\Support\Facades\DB::transaction(function () use ($session, $user, $request) {
+            return SessionCancellationRequest::create([
+                'timetable_session_id' => $session->id,
+                'formateur_id' => $user->id,
+                'requested_by' => $user->id,
+                'reason' => $request->input('reason'),
+                'status' => 'pending',
+            ]);
+        });
 
         // Notify Surveillant(s)
         $session->loadMissing(['module', 'group', 'room']);
         User::role(User::ROLE_SURVEILLANT)->approved()->get()
-            ->each(fn (User $s) => $s->notify(new SmartCampusNotification(
-                'Demande d\'annulation de seance',
+            ->each(fn (User $s) => $notifier->send($s, new SmartCampusNotification(
+                'Demande d\'annulation de séance',
                 sprintf('%s demande l\'annulation de %s (%s, %s). Raison: %s',
                     $user->name, $session->module->name, $session->group->code, $session->timeLabel(), $request->input('reason')),
                 route('timetable.index', ['group_id' => $session->group_id]),
                 'schedule',
-                sendMail: true,
+                sendMail: false, // Avoid blocking the request
             )));
 
-        broadcast(new \App\Events\SessionCancellationRequested($cancellationRequest))->toOthers();
+        try {
+            broadcast(new \App\Events\SessionCancellationRequested($cancellationRequest))->toOthers();
+        } catch (\Throwable $e) {
+            // Ignore broadcast errors so it doesn't break the user experience
+        }
 
-        return response()->json(['success' => true, 'message' => 'Demande d\'annulation envoyee.']);
+        return response()->json(['success' => true, 'message' => 'Demande d\'annulation envoyée.']);
     }
 
     public function cancellationRequests(): View

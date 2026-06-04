@@ -72,11 +72,30 @@ class ChatController extends Controller
         if ($request->hasFile('attachment')) {
             $file = $request->file('attachment');
             $path = $file->store('chat_attachments', 'public');
-            $type = in_array($file->extension(), ['jpg', 'jpeg', 'png', 'webp']) ? 'image' : 'pdf';
+            
+            $ext = strtolower($file->getClientOriginalExtension());
+            $categories = [
+                'image' => ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+                'video' => ['mp4', 'webm', 'mov'],
+                'pdf' => ['pdf'],
+                'word' => ['doc', 'docx'],
+                'powerpoint' => ['ppt', 'pptx'],
+                'excel' => ['xls', 'xlsx', 'csv'],
+            ];
+            
+            $category = 'other';
+            foreach ($categories as $cat => $extensions) {
+                if (in_array($ext, $extensions)) {
+                    $category = $cat;
+                    break;
+                }
+            }
             
             $data['attachment_path'] = $path;
-            $data['attachment_type'] = $type;
+            $data['attachment_category'] = $category;
             $data['attachment_original_name'] = $file->getClientOriginalName();
+            $data['attachment_mime_type'] = $file->getMimeType();
+            $data['attachment_size'] = $file->getSize();
         }
 
         $message = Message::create($data);
@@ -92,8 +111,10 @@ class ChatController extends Controller
             'sender' => $request->user()->name,
             'body' => $message->body,
             'attachment_url' => $message->attachmentUrl(),
-            'attachment_type' => $message->attachment_type,
+            'attachment_category' => $message->attachment_category,
             'attachment_original_name' => $message->attachment_original_name,
+            'attachment_mime_type' => $message->attachment_mime_type,
+            'attachment_size' => $message->attachment_size,
             'is_read' => false,
             'created_at' => $message->created_at->format('H:i'),
         ];
@@ -147,9 +168,11 @@ class ChatController extends Controller
                 'sender' => $message->sender->name,
                 'body' => $message->body,
                 'attachment_url' => $message->attachmentUrl(),
-                'attachment_type' => $message->attachment_type,
+                'attachment_category' => $message->attachment_category,
                 'attachment_original_name' => $message->attachment_original_name,
-                'is_read' => (bool) $message->is_read,
+                'attachment_mime_type' => $message->attachment_mime_type,
+                'attachment_size' => $message->attachment_size,
+                'is_read' => $message->is_read,
                 'created_at' => $message->created_at->format('H:i'),
             ]),
         ]);

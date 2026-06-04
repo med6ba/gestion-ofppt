@@ -130,6 +130,35 @@
                     @endforelse
                 </div>
             </section>
+
+            @php
+                $pendingFollowUps = \App\Models\AbsenceFollowUp::with(['stagiaire', 'group'])
+                    ->whereIn('status', ['pending', 'under_review'])
+                    ->latest('updated_at')
+                    ->take(5)
+                    ->get();
+            @endphp
+            <section class="sc-card p-5">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <h2 class="text-lg font-bold">Suivis Absences requis</h2>
+                    <a href="{{ route('surveillant.absences.index') }}" class="sc-btn sc-btn-secondary sc-btn-sm">Voir tout</a>
+                </div>
+                @if($pendingFollowUps->isEmpty())
+                    <p class="text-sm text-slate-500">Aucun suivi en attente.</p>
+                @else
+                    <div class="space-y-3">
+                        @foreach($pendingFollowUps as $fu)
+                            <a href="{{ route('surveillant.absences.show', $fu) }}" class="block rounded-lg border border-rose-200 bg-rose-50 p-3 hover:bg-rose-100 transition">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="font-semibold text-slate-800 text-sm">{{ $fu->stagiaire->name }}</div>
+                                    <span class="sc-badge bg-rose-100 text-rose-700 border-rose-200">{{ $fu->non_justified_absences }} abs.</span>
+                                </div>
+                                <div class="text-xs text-slate-500 mt-1">{{ $fu->group->name }} • {{ $fu->status === 'pending' ? 'En attente' : 'En cours' }}</div>
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+            </section>
         </aside>
     </div>
 

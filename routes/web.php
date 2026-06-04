@@ -9,12 +9,14 @@ use App\Http\Controllers\SmartCampus\AuthController;
 use App\Http\Controllers\SmartCampus\BadgeController;
 use App\Http\Controllers\SmartCampus\ChatController;
 use App\Http\Controllers\SmartCampus\DashboardController;
+use App\Http\Controllers\SmartCampus\EvaluationController;
 use App\Http\Controllers\SmartCampus\NotificationController;
 use App\Http\Controllers\SmartCampus\ProfileController;
 use App\Http\Controllers\SmartCampus\ResourceController;
 use App\Http\Controllers\SmartCampus\TimetableController;
 use App\Http\Controllers\SmartCampus\UserManagementController;
 use App\Http\Controllers\SmartCampus\SettingsController;
+use App\Http\Controllers\SmartCampus\SurveillantAbsenceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -107,6 +109,7 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::post('/resources/filieres', [ResourceController::class, 'storeFiliere'])->name('resources.filieres.store');
         Route::post('/resources/groups', [ResourceController::class, 'storeGroup'])->name('resources.groups.store');
         Route::post('/resources/modules', [ResourceController::class, 'storeModule'])->name('resources.modules.store');
+        Route::post('/resources/modules/{module}/settings', [ResourceController::class, 'updateModuleSettings'])->name('resources.modules.settings');
         Route::post('/resources/rooms', [ResourceController::class, 'storeRoom'])->name('resources.rooms.store');
 
         Route::post('/surveillant/attendance/severe-late/{attendance}/validate', [AttendanceController::class, 'validateSevereLate'])->name('attendance.severe-late.validate');
@@ -145,11 +148,34 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::post('/attendance/code', [AttendanceController::class, 'storeCode'])->name('attendance.code.store');
         Route::post('/attendance/late', [AttendanceController::class, 'declareLate'])->name('attendance.late.declare');
     });
+    Route::get('/surveillant/absences/suivi', [SurveillantAbsenceController::class, 'index'])
+        ->middleware('role:directeur,surveillant')
+        ->name('surveillant.absences.index');
+    Route::get('/surveillant/absences/suivi/{followUp}', [SurveillantAbsenceController::class, 'show'])
+        ->middleware('role:directeur,surveillant')
+        ->name('surveillant.absences.show');
+    Route::post('/surveillant/absences/suivi/{followUp}/resolve', [SurveillantAbsenceController::class, 'resolve'])
+        ->middleware('role:directeur,surveillant')
+        ->name('surveillant.absences.resolve');
 
     Route::get('/timetable', [TimetableController::class, 'mySchedule'])->name('timetable.mine');
     Route::get('/timetable/archive', [TimetableController::class, 'archive'])->name('timetable.archive');
     Route::get('/timetable/sessions/{session}', [TimetableController::class, 'sessionDetails'])->name('timetable.sessions.details');
     Route::get('/presence-xp', [AttendanceController::class, 'leaderboard'])->name('attendance.leaderboard');
+    Route::get('/evaluations', [EvaluationController::class, 'index'])->name('evaluations.index');
+    Route::get('/evaluations/notes', [EvaluationController::class, 'gradeEntry'])
+        ->middleware('role:formateur')
+        ->name('evaluations.grades');
+    Route::post('/evaluations/notes', [EvaluationController::class, 'storeGrades'])
+        ->middleware('role:formateur')
+        ->name('evaluations.grades.store');
+    Route::get('/evaluations/statistiques', [EvaluationController::class, 'statistics'])->name('evaluations.statistics');
+    Route::get('/evaluations/export/excel', [EvaluationController::class, 'exportExcel'])
+        ->middleware('role:directeur,surveillant,formateur')
+        ->name('evaluations.export.excel');
+    Route::get('/evaluations/export/pdf', [EvaluationController::class, 'exportPdf'])
+        ->middleware('role:directeur,surveillant,formateur')
+        ->name('evaluations.export.pdf');
     Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
     Route::post('/announcements', [AnnouncementController::class, 'store'])
         ->middleware('role:directeur,surveillant')

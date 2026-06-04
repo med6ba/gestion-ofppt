@@ -149,10 +149,24 @@
                                     </div>
                                     <div class="flex flex-wrap items-center gap-2">
                                         <span class="sc-badge {{ $statusTone($record?->status) }}">{{ $record ? $statusLabels[$record->status] : 'Aucun scan' }}</span>
-                                        @foreach (['present' => 'Present', 'absent' => 'Absent', 'late_validated' => 'Late', 'justified' => 'Justified'] as $value => $label)
-                                            <label class="cursor-pointer">
-                                                <input class="peer sr-only" type="radio" name="attendance[{{ $student->id }}]" value="{{ $value }}" @checked($current === $value) @disabled($attendanceClosed)>
-                                                <span class="block rounded-lg border border-slate-200 px-3 py-2 text-center text-xs font-semibold peer-checked:border-campus-600 peer-checked:bg-campus-50 peer-checked:text-campus-700">{{ $label }}</span>
+                                        
+                                        @php
+                                            $hasActiveFollowUp = in_array($student->id, $activeFollowUps);
+                                            $isAbsent = $record?->status === 'absent';
+                                            $canModify = !($hasActiveFollowUp && $isAbsent) || auth()->user()->isSurveillant() || auth()->user()->isDirecteur();
+                                        @endphp
+
+                                        @if($hasActiveFollowUp)
+                                            <span class="sc-badge bg-red-100 text-red-700 border-red-200">
+                                                <svg class="size-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                                Passage Surveillant requis
+                                            </span>
+                                        @endif
+
+                                        @foreach (['present' => 'Present', 'absent' => 'Absent', 'late_validated' => 'Late'] as $value => $label)
+                                            <label class="cursor-pointer {{ !$canModify && $current !== $value ? 'opacity-50 cursor-not-allowed' : '' }}" title="{{ !$canModify && $current !== $value ? 'Géré par le Surveillant Général' : '' }}">
+                                                <input class="peer sr-only" type="radio" name="attendance[{{ $student->id }}]" value="{{ $value }}" @checked($current === $value) @disabled($attendanceClosed || (!$canModify && $current !== $value))>
+                                                <span class="block rounded-lg border border-slate-200 px-3 py-2 text-center text-xs font-semibold peer-checked:border-campus-600 peer-checked:bg-campus-50 peer-checked:text-campus-700 peer-disabled:bg-slate-50">{{ $label }}</span>
                                             </label>
                                         @endforeach
                                     </div>
@@ -420,20 +434,6 @@
                         this.finalizeAction = action;
                         this.showFinalizeModal = true;
                     },
-                    async refreshUI() {
-                        try {
-                            const res = await fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                            const html = await res.text();
-                            const doc = new DOMParser().parseFromString(html, 'text/html');
-                            
-                            // Replace main content
-                            const currentMain = document.querySelector('.manar-content');
-                            const newMain = doc.querySelector('.manar-content');
-                            if (currentMain && newMain) {
-                                // Since we're inside an Alpine component, replacing innerHTML might break bindings if not careful,
-                                // but if we replace the inside of the wrapper or specific sections it's safer.
-                                // It's better to just reload the page for now if we don't have a structured API or Livewire.
-                                window.location.reload(); 
                             }
                         } catch (e) {
                             console.error(e);
@@ -485,21 +485,11 @@
                         this.interval = setInterval(() => {
                             this.secondsRemaining = Math.max(0, this.secondsRemaining - {{ $refreshIntervalSeconds }});
 
-                            fetch('{{ route('attendance.qr.refresh', $session) }}', {
-                                method: 'POST',
-                                headers: {
-                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                    'Accept': 'application/json',
-                                }
+                            axios.post('{{ route('attendance.qr.refresh', $session) }}', {}, {
+                                headers: { 'Accept': 'application/json' }
                             })
                             .then(res => {
-                                if (res.status === 410) {
-                                    clearInterval(this.interval);
-                                    window.location.reload();
-                                }
-                                return res.json();
-                            })
-                            .then(data => {
+                                const data = res.data;
                                 if (data.qrDataUri) {
                                     this.qrDataUri = data.qrDataUri;
                                 }

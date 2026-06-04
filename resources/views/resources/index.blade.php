@@ -60,17 +60,39 @@
         <section class="sc-card p-5">
             <h2 class="text-lg font-bold">Modules</h2>
             @if ($canManageResources)
-                <form method="POST" action="{{ route('resources.modules.store') }}" class="mt-4 grid gap-3 sm:grid-cols-[1fr_140px_auto]">
+                <form method="POST" action="{{ route('resources.modules.store') }}" class="mt-4 grid gap-3 sm:grid-cols-[1fr_140px_130px_auto]">
                     @csrf
                     <input class="sc-input" name="name" placeholder="Module name" required>
                     <input class="sc-input" name="code" placeholder="Code" required>
+                    <select class="sc-input" name="cc_count">
+                        <option value="3">3 CC</option>
+                        <option value="2">2 CC</option>
+                    </select>
                     <button class="sc-btn sc-btn-primary">Add</button>
                 </form>
             @endif
             <div class="mt-4 grid gap-2">
                 @foreach ($modules as $module)
                     <div class="rounded-lg border border-slate-200 p-3">
-                        <div class="font-semibold">{{ $module->code }} - {{ $module->name }}</div>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <div class="font-semibold">{{ $module->code }} - {{ $module->name }}</div>
+                                <div class="mt-1 text-xs text-slate-500">
+                                    {{ $module->cc_count ?? 3 }} CC /20 | EFM /{{ number_format((float) ($module->efm_max_score ?? 40), 0) }}
+                                    | {{ $module->grade_formula ?? 'moy_module = (moy_cc + efm) / 3' }}
+                                </div>
+                            </div>
+                            @if ($canManageResources)
+                                <form method="POST" action="{{ route('resources.modules.settings', $module) }}" class="flex items-center gap-2">
+                                    @csrf
+                                    <select class="sc-input h-10 w-28" name="cc_count">
+                                        <option value="3" @selected(($module->cc_count ?? 3) === 3)>3 CC</option>
+                                        <option value="2" @selected(($module->cc_count ?? 3) === 2)>2 CC</option>
+                                    </select>
+                                    <button class="sc-btn sc-btn-secondary h-10">OK</button>
+                                </form>
+                            @endif
+                        </div>
                     </div>
                 @endforeach
             </div>

@@ -120,6 +120,7 @@ class SmartCampusNavigation
             'attestations' => $request->routeIs('attestations.*'),
             'absences' => $request->routeIs('absences.*'),
             'formateur.absences' => $request->routeIs('formateur.absences'),
+            'surveillant.absences' => $request->routeIs('surveillant.absences.*'),
             'attendance.reports' => $request->routeIs('attendance.reports') && $request->query('focus') !== 'severe-late',
             'attendance.severe-late' => $request->routeIs('attendance.severe-late.*')
                 || ($request->routeIs('attendance.reports') && $request->query('focus') === 'severe-late'),
@@ -127,6 +128,9 @@ class SmartCampusNavigation
             'attendance.check-in' => $request->routeIs('attendance.check-in', 'attendance.scan', 'attendance.code.*', 'attendance.late.*'),
             'attendance.mine' => $request->routeIs('attendance.mine'),
             'attendance.xp' => $request->routeIs('attendance.leaderboard'),
+            'evaluations.index' => $request->routeIs('evaluations.index'),
+            'evaluations.grades' => $request->routeIs('evaluations.grades', 'evaluations.grades.*'),
+            'evaluations.statistics' => $request->routeIs('evaluations.statistics'),
             'announcements' => $request->routeIs('announcements.*'),
             'chat' => $request->routeIs('chat.*'),
             'ai' => $request->routeIs('ai.*'),
@@ -141,21 +145,22 @@ class SmartCampusNavigation
     {
         return [
             ['label' => self::label('messages.nav.home'), 'icon' => 'dashboard', 'route' => $user->dashboardRoute(), 'context' => 'dashboard', 'roles' => self::ALL_ROLES, 'mobile' => true, 'mobilePriority' => 10],
-            ['label' => self::label('messages.nav.services'), 'icon' => 'profile', 'roles' => [User::ROLE_DIRECTEUR, User::ROLE_SURVEILLANT, User::ROLE_FORMATEUR, User::ROLE_STAGIAIRE], 'children' => [
+            ['label' => self::label('messages.nav.services'), 'icon' => 'profile', 'categories' => ['documents'], 'roles' => [User::ROLE_DIRECTEUR, User::ROLE_SURVEILLANT, User::ROLE_FORMATEUR, User::ROLE_STAGIAIRE], 'children' => [
                 ['label' => self::label('messages.nav.my_badge'), 'icon' => 'qr', 'route' => 'stagiaire.badge', 'context' => 'stagiaire.badge', 'roles' => [User::ROLE_STAGIAIRE], 'mobile' => true, 'mobilePriority' => 25],
                 ['label' => self::label('messages.nav.attestation'), 'icon' => 'book', 'route' => 'attestations.index', 'context' => 'attestations', 'roles' => [User::ROLE_STAGIAIRE]],
                 ['label' => self::label('messages.nav.absence'), 'icon' => 'calendar', 'route' => 'absences.index', 'context' => 'absences', 'roles' => [User::ROLE_STAGIAIRE]],
                 ['label' => self::label('messages.nav.formateur_absence'), 'icon' => 'calendar', 'route' => 'formateur.absences', 'context' => 'formateur.absences', 'roles' => [User::ROLE_FORMATEUR]],
+                ['label' => 'Suivi des Absences', 'icon' => 'calendar', 'route' => 'surveillant.absences.index', 'context' => 'surveillant.absences', 'roles' => self::ADMIN_ROLES],
                 ['label' => self::label('messages.nav.attestation_requests'), 'icon' => 'book', 'route' => 'attestations.manage', 'context' => 'attestations', 'roles' => self::ADMIN_ROLES],
                 ['label' => self::label('messages.nav.absence_requests'), 'icon' => 'calendar', 'route' => 'absences.manage', 'context' => 'absences', 'roles' => self::ADMIN_ROLES],
             ]],
-            ['label' => self::label('messages.nav.users'), 'icon' => 'users', 'roles' => self::ADMIN_ROLES, 'children' => [
+            ['label' => self::label('messages.nav.users'), 'icon' => 'users', 'categories' => ['users'], 'roles' => self::ADMIN_ROLES, 'children' => [
                 ['label' => self::label('messages.nav.all_users'), 'icon' => 'users', 'route' => 'users.index', 'context' => 'users.all', 'roles' => [User::ROLE_DIRECTEUR]],
                 ['label' => self::label('messages.nav.create_user'), 'icon' => 'user-plus', 'route' => 'users.index', 'params' => ['panel' => 'create'], 'context' => 'users.create', 'roles' => [User::ROLE_DIRECTEUR]],
                 ['label' => self::label('messages.nav.stagiaires'), 'icon' => 'users', 'route' => 'users.index', 'params' => ['role' => User::ROLE_STAGIAIRE], 'context' => 'users.stagiaires', 'roles' => self::ADMIN_ROLES, 'mobile' => true, 'mobilePriority' => 20],
                 ['label' => self::label('messages.nav.approvals'), 'icon' => 'user-clock', 'route' => 'users.index', 'params' => ['role' => User::ROLE_STAGIAIRE, 'status' => 'pending'], 'context' => 'users.pending', 'roles' => self::ADMIN_ROLES],
             ]],
-            ['label' => self::label('messages.nav.teaching'), 'icon' => 'academic', 'roles' => self::ALL_ROLES, 'children' => [
+            ['label' => self::label('messages.nav.teaching'), 'icon' => 'academic', 'categories' => ['schedule'], 'roles' => self::ALL_ROLES, 'children' => [
                 ['label' => self::label('messages.nav.campus_timetable'), 'icon' => 'calendar', 'route' => 'timetable.index', 'context' => 'timetable.manage', 'roles' => self::ADMIN_ROLES, 'mobile' => true, 'mobilePriority' => 30],
                 ['label' => self::label('messages.nav.resources'), 'icon' => 'layers', 'route' => 'resources.index', 'context' => 'resources', 'roles' => self::ADMIN_ROLES],
                 ['label' => self::label('messages.nav.my_timetable'), 'icon' => 'calendar', 'route' => 'timetable.mine', 'context' => 'timetable.mine', 'roles' => [User::ROLE_FORMATEUR, User::ROLE_STAGIAIRE], 'mobile' => true, 'mobilePriority' => 20],
@@ -164,7 +169,7 @@ class SmartCampusNavigation
                 ['label' => self::label('messages.nav.my_students'), 'icon' => 'users', 'route' => 'formateur.teaching', 'params' => ['tab' => 'students'], 'context' => 'formateur.students', 'roles' => [User::ROLE_FORMATEUR]],
                 ['label' => self::label('messages.nav.my_modules'), 'icon' => 'layers', 'route' => 'stagiaire.modules', 'context' => 'stagiaire.modules', 'roles' => [User::ROLE_STAGIAIRE]],
             ]],
-            ['label' => self::label('messages.nav.presence'), 'icon' => 'clock', 'roles' => self::ALL_ROLES, 'children' => [
+            ['label' => self::label('messages.nav.presence'), 'icon' => 'clock', 'categories' => ['risk', 'attendance'], 'roles' => self::ALL_ROLES, 'children' => [
                 ['label' => self::label('messages.nav.reports'), 'icon' => 'chart-pie', 'route' => 'attendance.reports', 'context' => 'attendance.reports', 'roles' => self::ADMIN_ROLES, 'mobile' => true, 'mobilePriority' => 40],
                 ['label' => self::label('messages.nav.severe_late'), 'icon' => 'user-minus', 'route' => 'attendance.reports', 'params' => ['focus' => 'severe-late'], 'context' => 'attendance.severe-late', 'roles' => [User::ROLE_SURVEILLANT]],
                 ['label' => self::label('messages.nav.sessions'), 'icon' => 'check-circle', 'route' => 'attendance.index', 'context' => 'attendance.sessions', 'roles' => [User::ROLE_FORMATEUR], 'mobile' => true, 'mobilePriority' => 30],
@@ -172,12 +177,17 @@ class SmartCampusNavigation
                 ['label' => self::label('messages.nav.my_tracking'), 'icon' => 'clock', 'route' => 'attendance.mine', 'context' => 'attendance.mine', 'roles' => [User::ROLE_STAGIAIRE], 'mobile' => true, 'mobilePriority' => 40],
                 ['label' => self::label('messages.nav.presence_xp'), 'icon' => 'award', 'route' => 'attendance.leaderboard', 'context' => 'attendance.xp', 'roles' => self::ALL_ROLES],
             ]],
-            ['label' => self::label('messages.nav.communication'), 'icon' => 'messages', 'roles' => self::ALL_ROLES, 'children' => [
+            ['label' => self::label('messages.nav.evaluations'), 'icon' => 'star', 'categories' => ['evaluations'], 'roles' => self::ALL_ROLES, 'children' => [
+                ['label' => self::label('messages.nav.evaluations_list'), 'icon' => 'list', 'route' => 'evaluations.index', 'context' => 'evaluations.index', 'roles' => self::ALL_ROLES, 'mobile' => true, 'mobilePriority' => 45],
+                ['label' => self::label('messages.nav.grade_entry'), 'icon' => 'pencil', 'route' => 'evaluations.grades', 'context' => 'evaluations.grades', 'roles' => [User::ROLE_FORMATEUR]],
+                ['label' => self::label('messages.nav.evaluation_stats'), 'icon' => 'chart', 'route' => 'evaluations.statistics', 'context' => 'evaluations.statistics', 'roles' => self::ALL_ROLES],
+            ]],
+            ['label' => self::label('messages.nav.communication'), 'icon' => 'messages', 'categories' => ['messages', 'chat', 'announcements'], 'roles' => self::ALL_ROLES, 'children' => [
                 ['label' => self::label('messages.nav.announcements'), 'icon' => 'megaphone', 'route' => 'announcements.index', 'context' => 'announcements', 'roles' => self::ALL_ROLES],
                 ['label' => self::label('messages.common.chat'), 'icon' => 'chat-bubble', 'route' => 'chat.index', 'context' => 'chat', 'roles' => self::ALL_ROLES, 'mobile' => true, 'mobilePriority' => 50],
                 ['label' => self::label('messages.nav.campus_ai'), 'icon' => 'ai', 'route' => 'ai.index', 'context' => 'ai', 'roles' => self::ALL_ROLES],
             ]],
-            ['label' => self::label('messages.nav.account'), 'icon' => 'settings', 'roles' => self::ALL_ROLES, 'children' => [
+            ['label' => self::label('messages.nav.account'), 'icon' => 'settings', 'categories' => ['system'], 'roles' => self::ALL_ROLES, 'children' => [
                 ['label' => self::label('messages.common.notifications'), 'icon' => 'bell', 'route' => 'notifications.index', 'context' => 'notifications', 'roles' => self::ALL_ROLES],
                 ['label' => self::label('messages.common.profile'), 'icon' => 'profile', 'route' => 'profile.show', 'params' => ['user' => $user->id], 'context' => 'profile', 'roles' => self::ALL_ROLES],
                 ['label' => self::label('messages.common.settings'), 'icon' => 'settings', 'route' => 'settings.index', 'context' => 'settings', 'roles' => self::ALL_ROLES],

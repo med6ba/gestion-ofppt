@@ -128,6 +128,32 @@
                                 <input type="number" name="max_chat_attachment_mb" value="{{ $getSetting('max_chat_attachment_mb', 5) }}" class="sc-input w-full max-w-xs" min="1" max="50">
                                 <p class="text-xs text-slate-500 mt-1">S'applique aux images et PDF dans le chat.</p>
                             </div>
+                            
+                            <div class="pt-4 border-t border-slate-100">
+                                <h4 class="font-bold text-slate-800 mb-3">Absences et Comportement</h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre d'absences avant alerte</label>
+                                        <input type="number" name="absence_warning_threshold" value="{{ $getSetting('absence_warning_threshold', 3) }}" class="sc-input w-full">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-slate-700 mb-1">Passage Surveillant (seuil absences)</label>
+                                        <input type="number" name="absence_admin_threshold" value="{{ $getSetting('absence_admin_threshold', 5) }}" class="sc-input w-full">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-slate-700 mb-1">Note de comportement initiale</label>
+                                        <input type="number" name="conduct_score_initial" value="{{ $getSetting('conduct_score_initial', 20) }}" class="sc-input w-full" step="0.5">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-slate-700 mb-1">Pénalité par absence non justifiée</label>
+                                        <input type="number" name="non_justified_absence_penalty" value="{{ $getSetting('non_justified_absence_penalty', 1) }}" class="sc-input w-full" step="0.25">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-slate-700 mb-1">Pénalité par retard répété</label>
+                                        <input type="number" name="late_penalty" value="{{ $getSetting('late_penalty', 0.25) }}" class="sc-input w-full" step="0.05">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
@@ -143,7 +169,7 @@
                         </div>
                         
                         <div class="p-6 space-y-5">
-                            <div class="flex items-start gap-3">
+                            <div class="flex items-start gap-3 pb-4 border-b border-slate-100">
                                 <div class="flex items-center h-5 mt-1">
                                     <input type="hidden" name="allow_students_reply_in_group_chat" value="false">
                                     <input type="checkbox" name="allow_students_reply_in_group_chat" id="allow_students_reply_in_group_chat" value="true" class="size-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500" {{ filter_var($getSetting('allow_students_reply_in_group_chat', true), FILTER_VALIDATE_BOOLEAN) ? 'checked' : '' }}>
@@ -151,6 +177,37 @@
                                 <div>
                                     <label for="allow_students_reply_in_group_chat" class="font-semibold text-slate-700 block">Autoriser les stagiaires à répondre dans les groupes</label>
                                     <p class="text-sm text-slate-500">Si désactivé, seuls les formateurs pourront envoyer des messages dans les groupes de modules.</p>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-bold text-slate-800 mb-3">Types de pièces jointes autorisés</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    @foreach(['image' => 'Images', 'video' => 'Vidéos', 'pdf' => 'PDF', 'word' => 'Word', 'powerpoint' => 'PowerPoint', 'excel' => 'Excel'] as $type => $label)
+                                        <label class="flex items-center gap-2">
+                                            <input type="hidden" name="enable_{{ $type }}_attachments" value="false">
+                                            <input type="checkbox" name="enable_{{ $type }}_attachments" value="true" class="size-4 text-emerald-600 rounded" {{ filter_var($getSetting("enable_{$type}_attachments", true), FILTER_VALIDATE_BOOLEAN) ? 'checked' : '' }}>
+                                            <span class="text-sm text-slate-700">{{ $label }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-100">
+                                <h4 class="font-bold text-slate-800 mb-3">Limites de taille (MB)</h4>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-500 mb-1">Images</label>
+                                        <input type="number" name="max_chat_image_size_mb" value="{{ $getSetting('max_chat_image_size_mb', 5) }}" class="sc-input w-full" min="1" max="50">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-500 mb-1">Vidéos</label>
+                                        <input type="number" name="max_chat_video_size_mb" value="{{ $getSetting('max_chat_video_size_mb', 25) }}" class="sc-input w-full" min="1" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-500 mb-1">Documents</label>
+                                        <input type="number" name="max_chat_document_size_mb" value="{{ $getSetting('max_chat_document_size_mb', 10) }}" class="sc-input w-full" min="1" max="50">
+                                    </div>
                                 </div>
                             </div>
                         </div>
