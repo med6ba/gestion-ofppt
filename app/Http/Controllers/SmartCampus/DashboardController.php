@@ -52,7 +52,7 @@ class DashboardController extends Controller
             'suspiciousAttempts' => AttendanceAttempt::with(['stagiaire', 'session.group'])->latest('created_at')->take(6)->get(),
             'todaySessions' => TimetableSession::with(['group', 'module', 'room', 'formateur', 'activeAttendanceSession'])->forDate(now())->orderBy('starts_at')->take(8)->get(),
             'roomOccupancy' => $this->roomOccupancy(),
-            'attendanceChart' => $attendanceStats['chart'],
+            'attendanceTrendChart' => $this->attendanceTrendChart(),
             'mostAbsentStudents' => $this->mostAbsentStudents(6),
         ]);
     }
@@ -263,6 +263,30 @@ class DashboardController extends Controller
                     (int) $counts->get('justified', 0),
                 ],
             ],
+        ];
+    }
+
+    private function attendanceTrendChart(): array
+    {
+        $start = now()->startOfMonth()->subMonths(6);
+        $months = collect(range(0, 6))->map(fn (int $offset) => $start->copy()->addMonths($offset));
+        $attendances = Attendance::query()
+            ->whereBetween('created_at', [$start, now()->endOfMonth()])
+            ->get(['status', 'created_at']);
+        $acceptedStatuses = collect(Attendance::acceptedStatuses());
+
+        return [
+            'labels' => $months->map(fn ($month) => ucfirst($month->translatedFormat('M')))->values(),
+            'present' => $months->map(function ($month) use ($attendances, $acceptedStatuses) {
+                return $attendances
+                    ->filter(fn (Attendance $attendance) => $attendance->created_at->isSameMonth($month) && $acceptedStatuses->contains($attendance->status))
+                    ->count();
+            })->values(),
+            'absent' => $months->map(function ($month) use ($attendances) {
+                return $attendances
+                    ->filter(fn (Attendance $attendance) => $attendance->created_at->isSameMonth($month) && $attendance->status === Attendance::STATUS_ABSENT)
+                    ->count();
+            })->values(),
         ];
     }
 

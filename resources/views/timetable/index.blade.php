@@ -405,7 +405,13 @@
 
 @push('scripts')
 <script>
-document.addEventListener('alpine:init', () => {
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.Realtime && {{ $selectedGroupId ?? 'null' }}) {
+            window.Realtime.initTimetable({{ $selectedGroupId }});
+        }
+    });
+
+    document.addEventListener('alpine:init', () => {
     Alpine.data('timetableManager', () => ({
         init() {
             this.$watch('sessionForm.time_slot', value => {
@@ -420,6 +426,7 @@ document.addEventListener('alpine:init', () => {
                     this.editForm.ends_at = value.split('-')[1];
                 }
             });
+            window.addEventListener('timetable-updated', () => window.location.reload());
         },
         showCreateTimetableModal: false,
         showDuplicateModal: false,

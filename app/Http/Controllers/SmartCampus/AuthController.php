@@ -112,6 +112,8 @@ class AuthController extends Controller
                 'approval'
             )));
 
+        broadcast(new \App\Events\StagiaireRegistered($user))->toOthers();
+
         return redirect()->route('approval.pending');
     }
 

@@ -185,22 +185,45 @@
                 ],
             };
 
-            new Chart(document.getElementById('studentAttendanceChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: studentAttendance.labels,
-                    datasets: [{
-                        data: studentAttendance.data,
-                        backgroundColor: ['#009245', '#e11d48', '#f59e0b', '#005b9f'],
-                        borderWidth: 0,
-                    }],
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    cutout: '66%',
-                    plugins: { legend: { position: 'bottom' } },
-                },
-            });
+            const renderStagiaireCharts = () => {
+                if (!window.Chart) {
+                    window.requestAnimationFrame(renderStagiaireCharts);
+
+                    return;
+                }
+
+                const studentAttendanceCanvas = document.getElementById('studentAttendanceChart');
+
+                if (!studentAttendanceCanvas) {
+                    return;
+                }
+
+                new window.Chart(studentAttendanceCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: studentAttendance.labels,
+                        datasets: [{
+                            data: studentAttendance.data,
+                            backgroundColor: ['#009245', '#e11d48', '#f59e0b', '#005b9f'],
+                            borderWidth: 0,
+                        }],
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        cutout: '66%',
+                        plugins: { legend: { position: 'bottom' } },
+                    },
+                });
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', renderStagiaireCharts, { once: true });
+            } else {
+                renderStagiaireCharts();
+            }
+
+            window.addEventListener('timetable-updated', () => window.location.reload());
+            window.addEventListener('attendance-session-closed', () => window.location.reload());
         </script>
     @endpush
 </x-layouts.app>

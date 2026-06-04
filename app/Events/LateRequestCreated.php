@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Events;
+
+use App\Models\Attendance;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class LateRequestCreated implements ShouldBroadcastNow
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public $attendance;
+
+    public function __construct(Attendance $attendance)
+    {
+        $this->attendance = $attendance;
+    }
+
+    public function broadcastOn(): array
+    {
+        return [
+            new PrivateChannel('role.surveillant'),
+            new PrivateChannel('attendance.session.' . $this->attendance->session->timetable_session_id),
+        ];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'late.request.created';
+    }
+}

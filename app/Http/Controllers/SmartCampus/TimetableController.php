@@ -327,6 +327,8 @@ class TimetableController extends Controller
                 sendMail: true,
             )));
 
+        broadcast(new \App\Events\SessionCancellationRequested($cancellationRequest))->toOthers();
+
         return response()->json(['success' => true, 'message' => 'Demande d\'annulation envoyee.']);
     }
 
@@ -383,6 +385,8 @@ class TimetableController extends Controller
                 sendMail: true,
             )));
 
+        broadcast(new \App\Events\SessionCancellationApproved($cancellationRequest))->toOthers();
+
         return redirect()->route('timetable.index', ['group_id' => $session->group_id])
             ->with('status', 'Annulation approuvee. Notifications envoyees.');
     }
@@ -408,6 +412,8 @@ class TimetableController extends Controller
             'schedule',
             sendMail: true,
         ));
+
+        broadcast(new \App\Events\SessionCancellationRejected($cancellationRequest))->toOthers();
 
         return redirect()->route('timetable.index', ['group_id' => $session->group_id])
             ->with('status', 'Demande d\'annulation refusee.');
@@ -591,6 +597,8 @@ class TimetableController extends Controller
         $session->formateur->notify(new SmartCampusNotification($title, $body, $url, 'schedule'));
         $session->group->stagiaires()->approved()->get()
             ->each(fn (User $stagiaire) => $stagiaire->notify(new SmartCampusNotification($title, $body, $url, 'schedule')));
+        
+        broadcast(new \App\Events\TimetableUpdated($session->group_id))->toOthers();
     }
 
     private function announcePublishedTimetable(WeeklyTimetable $wt): void
@@ -617,5 +625,7 @@ class TimetableController extends Controller
         // Notify group stagiaires
         $wt->group->stagiaires()->approved()->get()
             ->each(fn (User $u) => $u->notify(new SmartCampusNotification($title, $body, route('timetable.mine'), 'schedule', sendMail: true)));
+            
+        broadcast(new \App\Events\TimetablePublished($wt->group_id))->toOthers();
     }
 }

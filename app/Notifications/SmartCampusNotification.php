@@ -22,7 +22,7 @@ class SmartCampusNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        $channels = ['database'];
+        $channels = ['database', 'broadcast'];
 
         if ($this->sendMail && filled($notifiable->email ?? null)) {
             $channels[] = 'mail';
@@ -34,6 +34,16 @@ class SmartCampusNotification extends Notification
     public function toDatabase(object $notifiable): DatabaseMessage
     {
         return new DatabaseMessage([
+            'title' => $this->title,
+            'body' => $this->body,
+            'url' => $this->url,
+            'category' => $this->category,
+        ]);
+    }
+
+    public function toBroadcast(object $notifiable): \Illuminate\Notifications\Messages\BroadcastMessage
+    {
+        return new \Illuminate\Notifications\Messages\BroadcastMessage([
             'title' => $this->title,
             'body' => $this->body,
             'url' => $this->url,

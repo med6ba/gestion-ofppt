@@ -1,4 +1,4 @@
-<div class="flex h-full flex-col bg-white border-r border-slate-200 w-full md:w-80 lg:w-96 shrink-0 {{ $activeConversation ? 'hidden md:flex' : 'flex' }}">
+<div id="chat-sidebar-container" class="flex h-full flex-col bg-white border-r border-slate-200 w-full md:w-80 lg:w-96 shrink-0 {{ $activeConversation ? 'hidden md:flex' : 'flex' }}">
     
     <!-- Header -->
     <div class="px-4 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">

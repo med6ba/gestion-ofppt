@@ -90,8 +90,8 @@
                                     <a href="{{ $hrefFor($item) }}" class="submenu-item {{ $itemActive ? 'active' : '' }}" @click="sidebarOpen = false" @if($itemActive) aria-current="page" @endif>
                                         <x-ui.icon :name="$item['icon']" size="size-4" class="mr-2 text-slate-400 shrink-0" />
                                         <span>{{ $item['label'] }}</span>
-                                        @if (($item['badge'] ?? null) === 'notifications' && $unreadCount)
-                                            <span class="menu-badge">{{ $unreadCount }}</span>
+                                        @if (($item['badge'] ?? null) === 'notifications')
+                                            <span class="menu-badge" x-data="{ count: {{ $unreadCount ?? 0 }} }" @notification-received.window="count++" x-show="count > 0" x-text="count"></span>
                                         @endif
                                     </a>
                                 @endforeach
@@ -138,15 +138,16 @@
                 <div class="flex items-center gap-1 sm:gap-3">
                     <x-language-switcher class="hidden md:flex" />
 
-                    <a href="{{ route('notifications.index') }}" class="manar-icon-btn relative" aria-label="Notifications">
-                        @if ($unreadCount ?? 0)
+                    <a href="{{ route('notifications.index') }}" class="manar-icon-btn relative" aria-label="Notifications" x-data="{ unread: {{ $unreadCount ?? 0 }} }" @notification-received.window="unread++">
+                        <template x-if="unread > 0">
                             <span class="bell-dot"></span>
-                        @endif
+                        </template>
                         <x-ui.icon name="bell" />
-                        @if ($unreadCount ?? 0)
-                            <span class="absolute -right-1 -top-1 rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-bold text-white">{{ $unreadCount }}</span>
-                        @endif
+                        <template x-if="unread > 0">
+                            <span class="absolute -right-1 -top-1 rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-bold text-white" x-text="unread"></span>
+                        </template>
                     </a>
+
 
                     <a href="{{ route('chat.index') }}" class="manar-icon-btn hidden sm:flex" aria-label="Chat">
                         <x-ui.icon name="chat-bubble" />
@@ -221,6 +222,14 @@
         @endforeach
     </nav>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.Realtime) {
+                window.Realtime.initNotifications({{ $user?->id ?? 'null' }});
+                window.Realtime.initTimetable({{ $user?->group_id ?? 'null' }});
+            }
+        });
+    </script>
     @stack('scripts')
 </body>
 </html>

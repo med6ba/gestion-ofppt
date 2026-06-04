@@ -1,6 +1,15 @@
 import './bootstrap';
 import Alpine from 'alpinejs';
 import collapse from '@alpinejs/collapse';
+import { initNotificationsRealtime } from './realtime/notifications';
+import { initAttendanceRealtime } from './realtime/attendance';
+import { initTimetableRealtime } from './realtime/timetable';
+
+window.Realtime = {
+    initNotifications: initNotificationsRealtime,
+    initAttendance: initAttendanceRealtime,
+    initTimetable: initTimetableRealtime,
+};
 import {
     BarController,
     BarElement,
@@ -8,6 +17,7 @@ import {
     Chart,
     DoughnutController,
     ArcElement,
+    Filler,
     Legend,
     LinearScale,
     LineController,
@@ -22,6 +32,7 @@ Chart.register(
     BarElement,
     CategoryScale,
     DoughnutController,
+    Filler,
     Legend,
     LinearScale,
     LineController,

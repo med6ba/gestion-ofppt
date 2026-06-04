@@ -196,9 +196,13 @@ class ChatController extends Controller
     {
         $conversation->participants()->updateExistingPivot(auth()->id(), ['last_read_at' => now()]);
 
-        $conversation->messages()
+        $updated = $conversation->messages()
             ->where('sender_id', '!=', auth()->id())
             ->where('is_read', false)
             ->update(['is_read' => true]);
+
+        if ($updated > 0) {
+            broadcast(new \App\Events\MessageRead($conversation->id, auth()->id()))->toOthers();
+        }
     }
 }

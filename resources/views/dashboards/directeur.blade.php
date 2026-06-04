@@ -13,19 +13,62 @@
         @endforeach
     </div>
 
-    <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_360px]">
-        <section class="sc-card p-5">
-            <div class="flex items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-lg font-bold">Attendance overview</h2>
-                    <p class="text-sm text-slate-500">Global absence rate: {{ $stats['absenceRate'] }}%</p>
+    <div class="mt-6 grid items-start gap-6 xl:grid-cols-[1fr_360px]">
+        <div class="space-y-6">
+            <section class="sc-card p-5">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold">Attendance overview</h2>
+                        <p class="text-sm text-slate-500">Global absence rate: {{ $stats['absenceRate'] }}%</p>
+                    </div>
+                    <span class="sc-badge bg-rose-100 text-rose-700">{{ $stats['suspiciousAttempts'] }} suspicious</span>
                 </div>
-                <span class="sc-badge bg-rose-100 text-rose-700">{{ $stats['suspiciousAttempts'] }} suspicious</span>
+                <div class="mt-5 h-72">
+                    <canvas id="attendanceChart"></canvas>
+                </div>
+            </section>
+
+            <div class="grid gap-6 lg:grid-cols-2">
+                <section class="sc-card p-5">
+                    <h2 class="text-lg font-bold">Today planning</h2>
+                    <div class="mt-4 grid gap-3">
+                        @forelse ($todaySessions as $session)
+                            <div class="rounded-lg border border-slate-200 p-3">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <div class="font-semibold">{{ $session->timeLabel() }} - {{ $session->module->name }}</div>
+                                    <span class="sc-badge bg-campus-50 text-campus-700">{{ $session->room->code }}</span>
+                                </div>
+                                <div class="mt-1 text-sm text-slate-500">{{ $session->group->code }} with {{ $session->formateur->name }}</div>
+                            </div>
+                        @empty
+                            <p class="text-sm text-slate-500">No sessions today.</p>
+                        @endforelse
+                    </div>
+                </section>
+
+                <section class="sc-card p-5">
+                    <h2 class="text-lg font-bold">Room occupancy</h2>
+                    <div class="mt-5 h-64">
+                        <canvas id="roomChart"></canvas>
+                    </div>
+                </section>
             </div>
-            <div class="mt-5 h-72">
-                <canvas id="attendanceChart"></canvas>
-            </div>
-        </section>
+
+            <section class="sc-card p-5">
+                <h2 class="text-lg font-bold">Correction audit logs summary</h2>
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                    @forelse ($auditLogs as $log)
+                        <div class="rounded-lg border border-slate-200 p-3">
+                            <div class="font-semibold">{{ $log->stagiaire->name }}</div>
+                            <div class="mt-1 text-xs text-slate-500">{{ $log->old_status ?? 'none' }} -> {{ $log->new_status }} | {{ $log->changedBy->name }}</div>
+                            <div class="mt-1 text-sm text-slate-600">{{ $log->reason }}</div>
+                        </div>
+                    @empty
+                        <p class="text-sm text-slate-500">No corrections yet.</p>
+                    @endforelse
+                </div>
+            </section>
+        </div>
 
         <aside class="space-y-6">
             <section class="sc-card p-5">
@@ -90,62 +133,92 @@
         </aside>
     </div>
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-2">
-        <section class="sc-card p-5">
-            <h2 class="text-lg font-bold">Today planning</h2>
-            <div class="mt-4 grid gap-3">
-                @forelse ($todaySessions as $session)
-                    <div class="rounded-lg border border-slate-200 p-3">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div class="font-semibold">{{ $session->timeLabel() }} - {{ $session->module->name }}</div>
-                            <span class="sc-badge bg-campus-50 text-campus-700">{{ $session->room->code }}</span>
-                        </div>
-                        <div class="mt-1 text-sm text-slate-500">{{ $session->group->code }} with {{ $session->formateur->name }}</div>
-                    </div>
-                @empty
-                    <p class="text-sm text-slate-500">No sessions today.</p>
-                @endforelse
-            </div>
-        </section>
-
-        <section class="sc-card p-5">
-            <h2 class="text-lg font-bold">Room occupancy</h2>
-            <div class="mt-5 h-64">
-                <canvas id="roomChart"></canvas>
-            </div>
-        </section>
-    </div>
-
-    <section class="mt-6 sc-card p-5">
-        <h2 class="text-lg font-bold">Correction audit logs summary</h2>
-        <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            @forelse ($auditLogs as $log)
-                <div class="rounded-lg border border-slate-200 p-3">
-                    <div class="font-semibold">{{ $log->stagiaire->name }}</div>
-                    <div class="mt-1 text-xs text-slate-500">{{ $log->old_status ?? 'none' }} -> {{ $log->new_status }} | {{ $log->changedBy->name }}</div>
-                    <div class="mt-1 text-sm text-slate-600">{{ $log->reason }}</div>
-                </div>
-            @empty
-                <p class="text-sm text-slate-500">No corrections yet.</p>
-            @endforelse
-        </div>
-    </section>
-
     @push('scripts')
         <script>
-            const attendanceData = @json($attendanceChart);
-            new Chart(document.getElementById('attendanceChart'), {
-                type: 'doughnut',
-                data: { labels: attendanceData.labels, datasets: [{ data: attendanceData.data, backgroundColor: ['#16846d', '#e11d48', '#f59e0b', '#3b82f6'] }] },
-                options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-            });
+            const renderDirecteurCharts = () => {
+                if (!window.Chart) {
+                    window.requestAnimationFrame(renderDirecteurCharts);
 
-            const rooms = @json($roomOccupancy);
-            new Chart(document.getElementById('roomChart'), {
-                type: 'bar',
-                data: { labels: rooms.map(item => item.room), datasets: [{ label: 'Usage %', data: rooms.map(item => item.rate), backgroundColor: '#16846d' }] },
-                options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
-            });
+                    return;
+                }
+
+                const attendanceCanvas = document.getElementById('attendanceChart');
+                const roomCanvas = document.getElementById('roomChart');
+
+                if (attendanceCanvas) {
+                    const attendanceData = @json($attendanceTrendChart);
+
+                    new window.Chart(attendanceCanvas, {
+                        type: 'line',
+                        data: {
+                            labels: attendanceData.labels,
+                            datasets: [
+                                {
+                                    label: 'Présences',
+                                    data: attendanceData.present,
+                                    borderColor: '#48bfa8',
+                                    backgroundColor: 'rgba(72, 191, 168, 0.28)',
+                                    fill: true,
+                                    tension: 0.42,
+                                    borderWidth: 2,
+                                    pointRadius: 3,
+                                    pointHoverRadius: 5,
+                                    pointBackgroundColor: '#48bfa8',
+                                },
+                                {
+                                    label: 'Absences',
+                                    data: attendanceData.absent,
+                                    borderColor: '#83d7c7',
+                                    backgroundColor: 'rgba(131, 215, 199, 0.48)',
+                                    fill: true,
+                                    tension: 0.42,
+                                    borderWidth: 2,
+                                    pointRadius: 3,
+                                    pointHoverRadius: 5,
+                                    pointBackgroundColor: '#83d7c7',
+                                },
+                            ],
+                        },
+                        options: {
+                            maintainAspectRatio: false,
+                            interaction: { intersect: false, mode: 'index' },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                    labels: { boxWidth: 28, boxHeight: 8, usePointStyle: false },
+                                },
+                            },
+                            scales: {
+                                x: {
+                                    grid: { color: 'rgba(148, 163, 184, 0.18)' },
+                                    ticks: { color: '#64748b', font: { size: 11 } },
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(148, 163, 184, 0.18)' },
+                                    ticks: { color: '#64748b', precision: 0 },
+                                },
+                            },
+                        },
+                    });
+                }
+
+                if (roomCanvas) {
+                    const rooms = @json($roomOccupancy);
+
+                    new window.Chart(roomCanvas, {
+                        type: 'bar',
+                        data: { labels: rooms.map(item => item.room), datasets: [{ label: 'Usage %', data: rooms.map(item => item.rate), backgroundColor: '#16846d' }] },
+                        options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+                    });
+                }
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', renderDirecteurCharts, { once: true });
+            } else {
+                renderDirecteurCharts();
+            }
         </script>
     @endpush
 </x-layouts.app>

@@ -362,6 +362,10 @@ class AttendanceController extends Controller
             ? 'Retard declare. En attente de validation par le formateur.'
             : 'Retard important declare. Votre cas doit etre valide par le Surveillant General.';
 
+        if ($status === Attendance::STATUS_LATE_PENDING || $status === Attendance::STATUS_SEVERE_LATE_PENDING) {
+            broadcast(new \App\Events\LateRequestCreated($attendance))->toOthers();
+        }
+
         $user->notify(new SmartCampusNotification('Declaration de retard envoyee', $message, route('stagiaire.dashboard'), 'attendance'));
 
         if ($status === Attendance::STATUS_LATE_PENDING) {
@@ -672,6 +676,8 @@ class AttendanceController extends Controller
         ]);
         QrAttendanceSession::where('attendance_session_id', $attendanceSession->id)->delete();
 
+        broadcast(new \App\Events\AttendanceSessionClosed($attendanceSession))->toOthers();
+
         $message = $severeLatePendingCount > 0
             ? 'Seance cloturee. Certains retards importants restent en attente de validation par le Surveillant General.'
             : 'Seance cloturee.';
@@ -863,7 +869,7 @@ class AttendanceController extends Controller
     {
         $settings = AttendanceSetting::minuteSettings();
 
-        return AttendanceSession::create([
+        $attendanceSession = AttendanceSession::create([
             'timetable_session_id' => $session->id,
             'formateur_id' => $formateur->id,
             'actual_started_at' => now(),
@@ -872,6 +878,10 @@ class AttendanceController extends Controller
             'severe_late_until_minutes' => $settings['severe_late_until_minutes'],
             'status' => AttendanceSession::STATUS_OPEN,
         ]);
+
+        broadcast(new \App\Events\AttendanceSessionStarted($attendanceSession))->toOthers();
+
+        return $attendanceSession;
     }
 
     private function ensureAttendanceSession(TimetableSession $session, User $formateur): AttendanceSession
@@ -920,6 +930,10 @@ class AttendanceController extends Controller
             route('stagiaire.dashboard'),
             'attendance'
         ));
+
+        if (in_array($newStatus, [Attendance::STATUS_LATE_VALIDATED, Attendance::STATUS_LATE_REJECTED, Attendance::STATUS_SEVERE_LATE_VALIDATED, Attendance::STATUS_SEVERE_LATE_REJECTED])) {
+            broadcast(new \App\Events\LateRequestReviewed($attendance))->toOthers();
+        }
 
         return $attendance;
     }

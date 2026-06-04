@@ -22,7 +22,7 @@
         </a>
     </div>
 
-    <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_360px]">
+    <div class="mt-6 grid items-start gap-6 xl:grid-cols-[1fr_360px]">
         <section class="sc-card p-5">
             <div class="flex items-center justify-between gap-3">
                 <h2 class="text-lg font-bold">Today sessions</h2>
@@ -86,12 +86,33 @@
 
     @push('scripts')
         <script>
-            const groupRates = @json($groupAbsenceRates);
-            new Chart(document.getElementById('groupAbsenceChart'), {
-                type: 'bar',
-                data: { labels: groupRates.map(item => item.label), datasets: [{ label: 'Absence %', data: groupRates.map(item => item.rate), backgroundColor: '#16846d' }] },
-                options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
-            });
+            const renderFormateurCharts = () => {
+                if (!window.Chart) {
+                    window.requestAnimationFrame(renderFormateurCharts);
+
+                    return;
+                }
+
+                const groupAbsenceCanvas = document.getElementById('groupAbsenceChart');
+
+                if (!groupAbsenceCanvas) {
+                    return;
+                }
+
+                const groupRates = @json($groupAbsenceRates);
+
+                new window.Chart(groupAbsenceCanvas, {
+                    type: 'bar',
+                    data: { labels: groupRates.map(item => item.label), datasets: [{ label: 'Absence %', data: groupRates.map(item => item.rate), backgroundColor: '#16846d' }] },
+                    options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+                });
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', renderFormateurCharts, { once: true });
+            } else {
+                renderFormateurCharts();
+            }
         </script>
     @endpush
 </x-layouts.app>

@@ -68,7 +68,7 @@
         </div>
     </section>
 
-    <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_380px]">
+    <div class="mt-6 grid items-start gap-6 xl:grid-cols-[1fr_380px]">
         <section class="sc-card p-5">
             <div class="flex items-center justify-between gap-3">
                 <h2 class="text-lg font-bold">{{ __('messages.dashboard.weekly_planning_snapshot') }}</h2>
@@ -157,19 +157,42 @@
 
     @push('scripts')
         <script>
-            const attendanceData = @json($attendanceChart);
-            new Chart(document.getElementById('attendanceChart'), {
-                type: 'bar',
-                data: { labels: attendanceData.labels, datasets: [{ data: attendanceData.data, backgroundColor: ['#16846d', '#e11d48', '#f59e0b', '#3b82f6'] }] },
-                options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
+            const renderSurveillantCharts = () => {
+                if (!window.Chart) {
+                    window.requestAnimationFrame(renderSurveillantCharts);
 
-            const rooms = @json($roomOccupancy);
-            new Chart(document.getElementById('roomChart'), {
-                type: 'bar',
-                data: { labels: rooms.map(item => item.room), datasets: [{ data: rooms.map(item => item.rate), backgroundColor: '#0f766e' }] },
-                options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
-            });
+                    return;
+                }
+
+                const attendanceCanvas = document.getElementById('attendanceChart');
+                const roomCanvas = document.getElementById('roomChart');
+
+                if (attendanceCanvas) {
+                    const attendanceData = @json($attendanceChart);
+
+                    new window.Chart(attendanceCanvas, {
+                        type: 'bar',
+                        data: { labels: attendanceData.labels, datasets: [{ data: attendanceData.data, backgroundColor: ['#16846d', '#e11d48', '#f59e0b', '#3b82f6'] }] },
+                        options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                    });
+                }
+
+                if (roomCanvas) {
+                    const rooms = @json($roomOccupancy);
+
+                    new window.Chart(roomCanvas, {
+                        type: 'bar',
+                        data: { labels: rooms.map(item => item.room), datasets: [{ data: rooms.map(item => item.rate), backgroundColor: '#0f766e' }] },
+                        options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+                    });
+                }
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', renderSurveillantCharts, { once: true });
+            } else {
+                renderSurveillantCharts();
+            }
         </script>
     @endpush
 </x-layouts.app>

@@ -398,6 +398,12 @@
 
     @push('scripts')
         <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                if (window.Realtime) {
+                    window.Realtime.initAttendance({{ $session->group_id }}, {{ $session->id }});
+                }
+            });
+
             document.addEventListener('alpine:init', () => {
                 Alpine.data('attendanceActions', () => ({
                     showRejectModal: false,
@@ -414,6 +420,30 @@
                         this.finalizeAction = action;
                         this.showFinalizeModal = true;
                     },
+                    async refreshUI() {
+                        try {
+                            const res = await fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                            const html = await res.text();
+                            const doc = new DOMParser().parseFromString(html, 'text/html');
+                            
+                            // Replace main content
+                            const currentMain = document.querySelector('.manar-content');
+                            const newMain = doc.querySelector('.manar-content');
+                            if (currentMain && newMain) {
+                                // Since we're inside an Alpine component, replacing innerHTML might break bindings if not careful,
+                                // but if we replace the inside of the wrapper or specific sections it's safer.
+                                // It's better to just reload the page for now if we don't have a structured API or Livewire.
+                                window.location.reload(); 
+                            }
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    },
+                    init() {
+                        window.addEventListener('late-request-created', () => this.refreshUI());
+                        window.addEventListener('late-request-reviewed', () => this.refreshUI());
+                        window.addEventListener('attendance-session-closed', () => this.refreshUI());
+                    }
                 }));
 
                 Alpine.data('qrAttendanceData', (initialStudents = []) => ({

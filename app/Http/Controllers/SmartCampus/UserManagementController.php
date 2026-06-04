@@ -99,6 +99,8 @@ class UserManagementController extends Controller
             sendMail: true
         ));
 
+        broadcast(new \App\Events\StagiaireApproved($user))->toOthers();
+
         return back()->with('status', "{$user->name} approved.");
     }
 
