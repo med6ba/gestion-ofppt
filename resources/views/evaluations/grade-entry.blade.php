@@ -40,7 +40,8 @@
             <p class="text-sm text-slate-500">Aucun groupe/module affecté à ce formateur.</p>
         </section>
     @else
-        <form method="POST" action="{{ route('evaluations.grades.store') }}" class="mt-6">
+        <form method="POST" action="{{ route('evaluations.grades.store') }}" class="mt-6"
+              x-data="gradeForm({{ $expectedCount }})" x-init="init()">
             @csrf
             <input type="hidden" name="group_id" value="{{ $selectedGroupId }}">
             <input type="hidden" name="module_id" value="{{ $selectedModuleId }}">
@@ -48,11 +49,12 @@
 
             <section class="sc-card p-5">
             @php
-                // Collect only meaningful messages (non-empty), deduplicated
                 $displayErrors = collect($errors->all())->filter(fn($m) => filled($m))->unique()->values();
             @endphp
+            <!-- Server-side error banner - auto-hides when user modifies any field -->
             @if ($displayErrors->isNotEmpty())
-                <div class="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                <div x-show="showErrors" x-cloak
+                     class="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
                     <div class="flex items-center gap-2 font-bold text-rose-800 mb-2">
                         <svg class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
                         Impossible d'enregistrer pour le moment.
@@ -65,6 +67,13 @@
                 </div>
             @endif
 
+            <!-- Client-side live warning -->
+            <div x-show="!showErrors && filledCount < totalCount && filledCount > 0" x-cloak
+                 class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 flex items-center gap-2">
+                <svg class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span><strong x-text="totalCount - filledCount"></strong> champ(s) encore vide(s). Remplissez-les tous pour pouvoir publier.</span>
+            </div>
+
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <h3 class="text-lg font-black text-slate-800">{{ $selected['group']->code }} | {{ $selected['module']->name }}</h3>
@@ -73,7 +82,12 @@
                             <span class="rounded-full bg-campus-50 px-3 py-1 text-campus-800">EFM /{{ $efmMaxScore }}</span>
                             <span class="rounded-full bg-primary/10 px-3 py-1 text-primary">{{ $formula }}</span>
                         </div>
-                        <p class="mt-2 text-sm text-slate-500">{{ $enteredCount }} / {{ $expectedCount }} notes saisies</p>
+                        <p class="mt-2 text-sm font-medium">
+                            <span :class="filledCount >= totalCount ? 'text-emerald-600' : 'text-slate-500'">
+                                <span x-text="filledCount">{{ $enteredCount }}</span> / {{ $expectedCount }} notes saisies
+                                <span x-show="filledCount >= totalCount" class="ml-1">✓</span>
+                            </span>
+                        </p>
                     </div>
                     <span class="sc-badge {{ $isPublished ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">{{ $isPublished ? 'Publié' : 'Brouillon' }}</span>
                 </div>
@@ -126,9 +140,12 @@
                                                 inputmode="decimal"
                                                 name="grades[{{ $student->id }}][{{ $noteType }}][score]"
                                                 value="{{ old($scoreField, $grade?->score) }}"
+                                                data-grade-score
+                                                data-empty="{{ old($scoreField, $grade?->score) === null || old($scoreField, $grade?->score) === '' ? 'true' : 'false' }}"
                                                 class="sc-input w-32 {{ $errors->has($scoreField) ? 'ring-2 ring-rose-400 border-rose-400' : '' }}"
                                                 placeholder="{{ $typeLabels[$noteType] }} /{{ $maxScore }}"
                                                 @if ($isEfm) x-bind:disabled="absent.{{ $noteType }}" @endif
+                                                @input="onScoreInput($event)"
                                             >
                                             @error($scoreField)
                                                 @if(filled($message))
@@ -202,9 +219,12 @@
                                             inputmode="decimal"
                                             name="grades[{{ $student->id }}][{{ $noteType }}][score]"
                                             value="{{ old($scoreField, $grade?->score) }}"
+                                            data-grade-score
+                                            data-empty="{{ old($scoreField, $grade?->score) === null || old($scoreField, $grade?->score) === '' ? 'true' : 'false' }}"
                                             class="sc-input mt-2 bg-white {{ $errors->has($scoreField) ? 'ring-2 ring-rose-400 border-rose-400' : '' }}"
                                             placeholder="Note / {{ $maxScore }}"
                                             @if ($isEfm) x-bind:disabled="absent.{{ $noteType }}" @endif
+                                            @input="onScoreInput($event)"
                                         >
                                         @error($scoreField)
                                             @if(filled($message))
@@ -249,10 +269,92 @@
                 </div>
             </section>
 
-            <div class="sticky bottom-4 z-20 mt-5 flex flex-wrap justify-end gap-2 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur">
-                <button name="action" value="draft" class="sc-btn sc-btn-secondary">Enregistrer brouillon</button>
-                <button name="action" value="publish" class="sc-btn sc-btn-primary">Publier les notes</button>
+            <div class="sticky bottom-4 z-20 mt-5 flex flex-wrap items-center justify-end gap-2 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur">
+                <!-- Live progress bar -->
+                <div class="flex-1 hidden sm:block">
+                    <div class="flex items-center gap-2 text-xs text-slate-500">
+                        <span x-text="filledCount + ' / ' + totalCount + ' champs'"></span>
+                        <div class="flex-1 h-1.5 rounded-full bg-slate-200 max-w-32">
+                            <div class="h-full rounded-full transition-all duration-300"
+                                 :class="filledCount >= totalCount ? 'bg-emerald-500' : 'bg-blue-500'"
+                                 :style="'width:' + Math.round((filledCount/totalCount)*100) + '%'"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" name="action" value="draft" class="sc-btn sc-btn-secondary">Enregistrer brouillon</button>
+
+                <div x-data class="relative group">
+                    <button type="submit" name="action" value="publish"
+                            class="sc-btn sc-btn-primary transition-opacity"
+                            :class="filledCount < totalCount ? 'opacity-60 cursor-not-allowed' : ''"
+                            @click.prevent="
+                                if (filledCount < totalCount) {
+                                    showErrors = false;
+                                    $dispatch('publish-blocked', { missing: totalCount - filledCount });
+                                    // scroll to first empty score input
+                                    const first = $el.closest('form').querySelector('input[data-empty=true]');
+                                    if (first) { first.focus(); first.scrollIntoView({ behavior:'smooth', block:'center' }); }
+                                } else {
+                                    $el.closest('form').querySelectorAll('[name=action]').forEach(b => { if(b !== $el) b.disabled = true; });
+                                    $el.form.submit();
+                                }
+                            ">
+                        Publier les notes
+                    </button>
+                    <!-- Tooltip when disabled -->
+                    <div x-show="filledCount < totalCount" x-cloak
+                         class="absolute bottom-12 right-0 w-56 rounded-lg bg-slate-800 text-white text-xs p-2.5 shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                        <span x-text="(totalCount - filledCount) + ' note(s) manquante(s) avant la publication.'"></span>
+                        <div class="absolute -bottom-1 right-4 w-2 h-2 bg-slate-800 rotate-45"></div>
+                    </div>
+                </div>
             </div>
         </form>
     @endif
+@push('scripts')
+<script>
+function gradeForm(total) {
+    return {
+        totalCount: total,
+        filledCount: 0,
+        showErrors: true, // starts true if there are server errors
+
+        init() {
+            // Count initially filled fields
+            this.filledCount = this.$el
+                .querySelectorAll('[data-grade-score]')
+                .length;
+
+            // Subtract empty ones
+            this.$el.querySelectorAll('[data-grade-score]').forEach(input => {
+                if (!input.value.trim()) this.filledCount--;
+            });
+
+            // Make totalCount accurate (only count visible score inputs)
+            this.totalCount = this.$el.querySelectorAll('[data-grade-score]').length;
+        },
+
+        onScoreInput(event) {
+            // Hide stale server error banner as soon as user starts typing
+            this.showErrors = false;
+
+            const input = event.target;
+            const wasFilled = input.dataset.empty === 'false';
+            const isFilled = input.value.trim() !== '';
+
+            if (isFilled && !wasFilled) {
+                this.filledCount++;
+                input.dataset.empty = 'false';
+                // Remove red ring when user fills the field
+                input.classList.remove('ring-2', 'ring-rose-400', 'border-rose-400');
+            } else if (!isFilled && wasFilled) {
+                this.filledCount--;
+                input.dataset.empty = 'true';
+            }
+        }
+    };
+}
+</script>
+@endpush
 </x-layouts.app>
