@@ -146,7 +146,7 @@
                             </template>
                             <div class="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-700" x-text="cancelSessionLabel"></div>
                             <div>
-                                <label class="sc-label">{{ __('messages.absences.cancellation_reason') }}</label>
+                                <x-form.label>{{ __('messages.absences.cancellation_reason') }}</x-form.label>
                                 <textarea
                                     x-model="cancelReason"
                                     class="sc-input mt-1"

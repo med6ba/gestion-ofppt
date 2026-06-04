@@ -35,11 +35,11 @@
             <form method="POST" action="{{ route('register.store') }}" class="mt-6 grid gap-4">
                 @csrf
                 <div>
-                    <label class="sc-label">{{ __('messages.auth.full_name') }}</label>
+                    <x-form.label>{{ __('messages.auth.full_name') }}</x-form.label>
                     <input class="sc-input mt-1" name="name" value="{{ old('name') }}" required>
                 </div>
                 <div>
-                    <label class="sc-label">{{ __('messages.common.email') }}</label>
+                    <x-form.label>{{ __('messages.common.email') }}</x-form.label>
                     <label class="email-domain-field mt-1" dir="ltr">
                         <input class="email-domain-input" name="email_local_part" type="text" value="{{ $oldEmailLocalPart }}" placeholder="{{ __('messages.auth.email_placeholder') }}" required autocomplete="username" inputmode="email" dir="ltr">
                         <span class="email-domain-suffix" dir="ltr">@ofppt-edu.ma</span>
@@ -47,20 +47,20 @@
                 </div>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
-                        <label class="sc-label">{{ __('messages.auth.phone') }}</label>
+                        <x-form.label>{{ __('messages.auth.phone') }}</x-form.label>
                         <input class="sc-input mt-1" name="phone" value="{{ old('phone') }}">
                     </div>
                     <div>
-                        <label class="sc-label">{{ __('messages.auth.registration_number') }}</label>
+                        <x-form.label>{{ __('messages.auth.registration_number') }}</x-form.label>
                         <input class="sc-input mt-1" name="registration_number" value="{{ old('registration_number') }}">
                     </div>
                 </div>
                 <div>
-                    <label class="sc-label">{{ __('messages.common.cni') }}</label>
+                    <x-form.label>{{ __('messages.common.cni') }}</x-form.label>
                     <input class="sc-input mt-1 uppercase" name="cni" value="{{ old('cni') }}" required>
                 </div>
                 <div>
-                    <label class="sc-label">{{ __('messages.common.group') }}</label>
+                    <x-form.label>{{ __('messages.common.group') }}</x-form.label>
                     <select class="sc-input mt-1" name="group_id" required>
                         <option value="">{{ __('messages.auth.choose_group') }}</option>
                         @foreach ($groups as $group)
@@ -70,11 +70,11 @@
                 </div>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
-                        <label class="sc-label">{{ __('messages.common.password') }}</label>
+                        <x-form.label>{{ __('messages.common.password') }}</x-form.label>
                         <input class="sc-input mt-1" type="password" name="password" required>
                     </div>
                     <div>
-                        <label class="sc-label">{{ __('messages.common.confirm_password') }}</label>
+                        <x-form.label>{{ __('messages.common.confirm_password') }}</x-form.label>
                         <input class="sc-input mt-1" type="password" name="password_confirmation" required>
                     </div>
                 </div>

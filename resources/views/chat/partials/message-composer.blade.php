@@ -85,11 +85,11 @@
               }).catch(error => {
                   console.error(error);
                   if (error.response && error.response.data && error.response.data.errors) {
-                      alert(Object.values(error.response.data.errors).flat().join('\n'));
+                      window.dispatchEvent(new CustomEvent('show-alert', { detail: { message: Object.values(error.response.data.errors).flat().join('\n'), type: 'danger' } }));
                   } else if (error.response && error.response.data && error.response.data.message) {
-                      alert(error.response.data.message);
+                      window.dispatchEvent(new CustomEvent('show-alert', { detail: { message: error.response.data.message, type: 'danger' } }));
                   } else {
-                      alert('Erreur lors de l\'envoi du message');
+                      window.dispatchEvent(new CustomEvent('show-alert', { detail: { message: 'Erreur lors de l\'envoi du message', type: 'danger' } }));
                   }
               }).finally(() => {
                   isSubmitting = false;

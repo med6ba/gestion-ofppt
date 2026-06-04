@@ -2,7 +2,7 @@
 
 return [
     'brand' => 'الحرم الذكي OFPPT',
-    'locale' => ['fr' => 'Français', 'ar' => 'العربية', 'en' => 'English'],
+    'locale' => ['fr' => 'Français', 'ar' => 'العربية', 'en' => 'English', 'es' => 'Español'],
     'common' => [
         'login' => 'تسجيل الدخول', 'register' => 'التسجيل', 'logout' => 'تسجيل الخروج', 'email' => 'البريد الإلكتروني',
         'password' => 'كلمة المرور', 'confirm_password' => 'تأكيد كلمة المرور', 'remember_me' => 'تذكرني',
@@ -109,6 +109,7 @@ return [
         'camera_unavailable' => 'الكاميرا غير متاحة. تحقق من إذن المتصفح.',
         'logout_confirm_title' => 'تأكيد تسجيل الخروج',
         'logout_confirm_text' => 'هل تريد فعلا إنهاء جلسة الحرم الذكي؟',
+        'demo_accounts' => 'حسابات تجريبية',
     ],
     'nav' => [
         'home' => 'الرئيسية', 'services' => 'الخدمات', 'my_badge' => 'شارتي',
@@ -241,5 +242,17 @@ return [
         'absence_admin_title' => 'طلب غياب جديد', 'absence_admin_body' => ':name طلب ترخيص غياب بتاريخ :date.',
         'absence_approved_title' => 'تم قبول ترخيص الغياب', 'absence_approved_body' => 'تم قبول طلب الغياب بتاريخ :date.',
         'absence_rejected_title' => 'تم رفض ترخيص الغياب', 'absence_rejected_body' => 'تم رفض طلب الغياب بتاريخ :date.',
+    ],
+    'theme' => [
+        'light' => 'فاتح',
+        'dark' => 'داكن',
+        'system' => 'النظام',
+        'toggle' => 'المظهر',
+    ],
+    'pwa' => [
+        'offline_title' => 'أنت غير متصل',
+        'offline_text' => 'تحقق من اتصالك بالإنترنت وحاول مرة أخرى.',
+        'retry' => 'إعادة المحاولة',
+        'install' => 'تثبيت التطبيق',
     ],
 ];

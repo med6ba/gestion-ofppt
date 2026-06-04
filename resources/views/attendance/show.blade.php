@@ -93,7 +93,9 @@
                                         </span>
                                     </label>
                                     <div class="flex flex-wrap gap-2">
-                                        <button type="submit" formaction="{{ route('attendance.late.validate', [$session, $attendance]) }}" class="sc-btn border border-emerald-200 bg-emerald-50 text-emerald-700">Validate</button>
+                                        <x-confirmation-modal title="Valider le retard" message="Valider ce retard ?" confirmText="Valider" type="primary">
+                                            <button type="submit" formaction="{{ route('attendance.late.validate', [$session, $attendance]) }}" class="sc-btn border border-emerald-200 bg-emerald-50 text-emerald-700">Validate</button>
+                                        </x-confirmation-modal>
                                         <button type="button" @click="openRejectModal('{{ route('attendance.late.reject', [$session, $attendance]) }}', @js($attendance->stagiaire->name))" class="sc-btn border border-rose-200 bg-rose-50 text-rose-700">Reject</button>
                                     </div>
                                 </div>
@@ -102,8 +104,12 @@
 
                         <div class="grid gap-3 rounded-lg bg-slate-50 p-3 md:grid-cols-[1fr_auto_auto]">
                             <input name="rejection_reason" class="sc-input" placeholder="Reason required for rejection">
-                            <button class="sc-btn border border-emerald-200 bg-emerald-50 text-emerald-700">Validate selected</button>
-                            <button formaction="{{ route('attendance.late.bulk-reject', $session) }}" class="sc-btn border border-rose-200 bg-rose-50 text-rose-700">Reject selected</button>
+                            <x-confirmation-modal title="Valider la sélection" message="Êtes-vous sûr de vouloir valider les retards sélectionnés ?" confirmText="Valider" type="primary">
+                                <button class="sc-btn border border-emerald-200 bg-emerald-50 text-emerald-700">Validate selected</button>
+                            </x-confirmation-modal>
+                            <x-confirmation-modal title="Refuser la sélection" message="Êtes-vous sûr de vouloir refuser les retards sélectionnés ?" confirmText="Refuser" type="danger">
+                                <button formaction="{{ route('attendance.late.bulk-reject', $session) }}" class="sc-btn border border-rose-200 bg-rose-50 text-rose-700">Reject selected</button>
+                            </x-confirmation-modal>
                         </div>
                     </form>
                 @else
@@ -174,9 +180,11 @@
                             </div>
                         @endforeach
                     </div>
-                    <button class="sc-btn sc-btn-secondary mt-5" @disabled($attendanceClosed)>
-                        {{ $attendanceClosed ? 'Seance cloturee' : 'Enregistrer les statuts manuels' }}
-                    </button>
+                    <x-confirmation-modal title="Enregistrer l'appel" message="Êtes-vous sûr de vouloir enregistrer ces statuts manuels ?" confirmText="Enregistrer" type="primary">
+                        <button type="submit" class="sc-btn sc-btn-secondary mt-5" @disabled($attendanceClosed)>
+                            {{ $attendanceClosed ? 'Seance cloturee' : 'Enregistrer les statuts manuels' }}
+                        </button>
+                    </x-confirmation-modal>
                 </form>
             </section>
         </section>
@@ -226,7 +234,9 @@
 
                                     <form method="POST" action="{{ route('attendance.qr.stop', $session) }}" class="mt-8 w-full max-w-[450px]">
                                         @csrf
-                                        <button type="submit" class="sc-btn sc-btn-danger w-full py-4 text-xl font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all">Terminer l'appel</button>
+                                        <x-confirmation-modal title="Terminer l'appel QR" message="Êtes-vous sûr de vouloir fermer l'appel par QR code maintenant ?" confirmText="Terminer" type="danger">
+                                            <button type="submit" class="sc-btn sc-btn-danger w-full py-4 text-xl font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all">Terminer l'appel</button>
+                                        </x-confirmation-modal>
                                     </form>
                                 </div>
 
@@ -374,7 +384,7 @@
                     <form method="POST" :action="rejectAction">
                         @csrf
                         <div class="sc-modal-body">
-                            <label class="sc-label">Raison du refus</label>
+                            <x-form.label>Raison du refus</x-form.label>
                             <textarea name="rejection_reason" class="sc-input mt-1 min-h-28" required maxlength="500" placeholder="Expliquez la raison pour garder un historique clair."></textarea>
                         </div>
                         <div class="sc-modal-footer">
@@ -434,10 +444,8 @@
                         this.finalizeAction = action;
                         this.showFinalizeModal = true;
                     },
-                            }
-                        } catch (e) {
-                            console.error(e);
-                        }
+                    refreshUI() {
+                        window.location.reload();
                     },
                     init() {
                         window.addEventListener('late-request-created', () => this.refreshUI());

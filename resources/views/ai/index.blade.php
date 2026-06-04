@@ -11,7 +11,7 @@
 
             <form method="POST" action="{{ route('ai.ask') }}" class="mt-6 space-y-3">
                 @csrf
-                <label class="sc-label">Question</label>
+                <x-form.label>Question</x-form.label>
                 <textarea class="sc-input" name="question" rows="4" placeholder="Ask about today schedule, attendance, room information, or campus insights." required>{{ old('question', $question) }}</textarea>
                 <button class="sc-btn sc-btn-primary">Ask CampusAI</button>
             </form>

@@ -38,10 +38,12 @@
                     @if ($weeklyTimetable->isDraft())
                         <form method="POST" action="{{ route('timetable.weekly.launch', $weeklyTimetable) }}">
                             @csrf
-                            <button class="sc-btn sc-btn-primary" onclick="return confirm('Lancer cet emploi du temps ? Les notifications seront envoyées.')">
-                                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                Lancer l'emploi
-                            </button>
+                            <x-confirmation-modal title="Lancer l'emploi du temps" message="Êtes-vous sûr de vouloir lancer cet emploi du temps ? Les notifications seront envoyées aux formateurs et stagiaires." confirmText="Lancer" type="primary">
+                                <button type="submit" class="sc-btn sc-btn-primary">
+                                    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                    Lancer l'emploi
+                                </button>
+                            </x-confirmation-modal>
                         </form>
                     @endif
                     <button @click="showDuplicateModal = true" class="sc-btn sc-btn-secondary">
@@ -125,12 +127,16 @@
                                 <form method="POST" action="{{ route('timetable.cancellations.approve', $req) }}">
                                     @csrf
                                     <input type="text" name="review_note" placeholder="Note (optionnel)" class="sc-input mb-2 text-xs">
-                                    <button class="sc-btn sc-btn-primary w-full text-xs">Approuver</button>
+                                    <x-confirmation-modal title="Confirmer l'approbation" message="Êtes-vous sûr de vouloir approuver cette annulation ?" confirmText="{{ __('messages.common.approve') }}" cancelText="{{ __('messages.common.cancel') }}" type="primary">
+                                        <button class="sc-btn sc-btn-primary w-full text-xs">Approuver</button>
+                                    </x-confirmation-modal>
                                 </form>
                                 <form method="POST" action="{{ route('timetable.cancellations.reject', $req) }}">
                                     @csrf
                                     <input type="hidden" name="review_note" value="">
-                                    <button class="sc-btn sc-btn-danger w-full text-xs">Rejeter</button>
+                                    <x-confirmation-modal title="Confirmer le refus" message="Êtes-vous sûr de vouloir refuser cette annulation ?" confirmText="{{ __('messages.common.reject') }}" cancelText="{{ __('messages.common.cancel') }}" type="danger">
+                                        <button class="sc-btn sc-btn-danger w-full text-xs">Rejeter</button>
+                                    </x-confirmation-modal>
                                 </form>
                             </div>
                         </div>
@@ -160,23 +166,23 @@
                             </div>
                         </template>
                         <div>
-                            <label class="sc-label">Groupe</label>
+                            <x-form.label>Groupe</x-form.label>
                             <x-ui.select
                                 x-model="createForm.group_id"
                                 :alpine-options="Js::from($groups->map(fn($g) => ['id' => $g->id, 'name' => $g->code . ' - ' . $g->name]))"
                             />
                         </div>
                         <div>
-                            <label class="sc-label">Semaine (Lundi)</label>
+                            <x-form.label>Semaine (Lundi)</x-form.label>
                             <input x-model="createForm.week_start_date" type="date" class="sc-input mt-1" required>
                             <p class="mt-2 text-sm text-slate-500">Choisissez la semaine que vous souhaitez préparer. Vous pourrez ensuite ajouter les séances pour chaque classe.</p>
                         </div>
                         <div>
-                            <label class="sc-label">Titre (optionnel)</label>
+                            <x-form.label>Titre (optionnel)</x-form.label>
                             <input x-model="createForm.title" type="text" class="sc-input mt-1" placeholder="Ex: Planning principal">
                         </div>
                         <div>
-                            <label class="sc-label">Notes (optionnel)</label>
+                            <x-form.label>Notes (optionnel)</x-form.label>
                             <textarea x-model="createForm.notes" class="sc-input mt-1" rows="2"></textarea>
                         </div>
                     </div>
@@ -203,7 +209,7 @@
                     <div class="sc-modal-body space-y-4">
                         <p class="text-sm text-slate-600">Copier cet emploi du temps (S{{ $weeklyTimetable->week_start_date->weekOfYear }}) vers une nouvelle semaine :</p>
                         <div>
-                            <label class="sc-label">Début de la nouvelle semaine (Lundi)</label>
+                            <x-form.label>Début de la nouvelle semaine (Lundi)</x-form.label>
                             <input type="date" name="new_week_start" value="{{ $weeklyTimetable->week_start_date->copy()->addWeek()->toDateString() }}" class="sc-input mt-1" required>
                         </div>
                     </div>
@@ -234,18 +240,18 @@
                         </template>
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div>
-                                <label class="sc-label">Groupe</label>
+                                <x-form.label>Groupe</x-form.label>
                                 <x-ui.select
                                     x-model="sessionForm.group_id"
                                     :alpine-options="Js::from($groups->map(fn($g) => ['id' => $g->id, 'name' => $g->code . ' - ' . $g->name]))"
                                 />
                             </div>
                             <div>
-                                <label class="sc-label">Semaine (Lundi)</label>
+                                <x-form.label>Semaine (Lundi)</x-form.label>
                                 <input x-model="sessionForm.week_start_date" type="date" class="sc-input mt-1" required>
                             </div>
                             <div>
-                                <label class="sc-label">Module</label>
+                                <x-form.label>Module</x-form.label>
                                 <select x-model="sessionForm.module_id" class="sc-input mt-1" required>
                                     <option value="">— Choisir —</option>
                                     <template x-for="module in filteredModules" :key="module.id">
@@ -254,7 +260,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="sc-label">Formateur</label>
+                                <x-form.label>Formateur</x-form.label>
                                 <select x-model="sessionForm.formateur_id" class="sc-input mt-1" required>
                                     <option value="">— Choisir —</option>
                                     <template x-for="formateur in filteredFormateurs" :key="formateur.id">
@@ -263,7 +269,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="sc-label">Salle</label>
+                                <x-form.label>Salle</x-form.label>
                                 <select x-model="sessionForm.room_id" class="sc-input mt-1" required>
                                     <option value="">— Choisir —</option>
                                     @foreach ($rooms as $room)
@@ -272,7 +278,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="sc-label">Jour</label>
+                                <x-form.label>Jour</x-form.label>
                                 <select x-model="sessionForm.day_of_week" class="sc-input mt-1" required>
                                     @foreach ($weekDays as $val => $label)
                                         <option value="{{ $val }}">{{ $label }}</option>
@@ -280,7 +286,7 @@
                                 </select>
                             </div>
                             <div class="col-span-2 sm:col-span-2">
-                                <label class="sc-label">Horaire (OFPPT - 2h30)</label>
+                                <x-form.label>Horaire (OFPPT - 2h30)</x-form.label>
                                 <select x-model="sessionForm.time_slot" @change="sessionForm.starts_at = $event.target.value.split('-')[0]; sessionForm.ends_at = $event.target.value.split('-')[1];" class="sc-input mt-1" required>
                                     @foreach ($sessionSlots as $value => $label)
                                         <option value="{{ $value }}">{{ $label }}</option>
@@ -291,7 +297,7 @@
                             </div>
                         </div>
                         <div>
-                            <label class="sc-label">Note (optionnel)</label>
+                            <x-form.label>Note (optionnel)</x-form.label>
                             <textarea x-model="sessionForm.change_note" class="sc-input mt-1" rows="2"></textarea>
                         </div>
                     </div>
@@ -321,7 +327,7 @@
                         </template>
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div>
-                                <label class="sc-label">Module</label>
+                                <x-form.label>Module</x-form.label>
                                 <x-ui.select
                                     x-model="editForm.module_id"
                                     alpine-options="filteredEditModules"
@@ -329,28 +335,28 @@
                                 />
                             </div>
                             <div>
-                                <label class="sc-label">Formateur</label>
+                                <x-form.label>Formateur</x-form.label>
                                 <x-ui.select
                                     x-model="editForm.formateur_id"
                                     alpine-options="filteredEditFormateurs"
                                 />
                             </div>
                             <div>
-                                <label class="sc-label">Salle</label>
+                                <x-form.label>Salle</x-form.label>
                                 <x-ui.select
                                     x-model="editForm.room_id"
                                     :alpine-options="Js::from($rooms->map(fn($r) => ['id' => $r->id, 'name' => $r->code . ' - ' . $r->name]))"
                                 />
                             </div>
                             <div>
-                                <label class="sc-label">Jour</label>
+                                <x-form.label>Jour</x-form.label>
                                 <x-ui.select
                                     x-model="editForm.day_of_week"
                                     :alpine-options="Js::from(collect($weekDays)->map(fn($l, $v) => ['id' => $v, 'name' => $l])->values())"
                                 />
                             </div>
                             <div class="col-span-2 sm:col-span-2">
-                                <label class="sc-label">Horaire (OFPPT - 2h30)</label>
+                                <x-form.label>Horaire (OFPPT - 2h30)</x-form.label>
                                 <x-ui.select
                                     x-model="editForm.time_slot"
                                     :alpine-options="Js::from(collect($sessionSlots)->map(fn($label, $value) => ['id' => $value, 'name' => $label])->values())"
@@ -361,7 +367,7 @@
                             </div>
                         </div>
                         <div>
-                            <label class="sc-label">Note de modification</label>
+                            <x-form.label>Note de modification</x-form.label>
                             <textarea x-model="editForm.change_note" class="sc-input mt-1" rows="2"></textarea>
                         </div>
                     </div>
@@ -389,7 +395,7 @@
                             <p class="mt-1 text-sm text-rose-600" x-text="deleteSessionLabel"></p>
                         </div>
                         <div>
-                            <label class="sc-label">Raison (optionnel)</label>
+                            <x-form.label>Raison (optionnel)</x-form.label>
                             <textarea x-model="deleteReason" class="sc-input mt-1" rows="2" placeholder="Expliquez pourquoi..."></textarea>
                         </div>
                     </div>

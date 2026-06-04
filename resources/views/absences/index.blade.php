@@ -142,16 +142,16 @@
                             <template x-if="!sessionLabel">
                                 <div class="space-y-4">
                                     <div>
-                                        <label class="sc-label">{{ __('messages.absences.absence_date') }}</label>
+                                        <x-form.label>{{ __('messages.absences.absence_date') }}</x-form.label>
                                         <input class="sc-input mt-1" type="date" name="absence_date" x-model="absenceDate" required>
                                     </div>
                                     <div class="grid gap-4 sm:grid-cols-2">
                                         <div>
-                                            <label class="sc-label">{{ __('messages.absences.start_time') }}</label>
+                                            <x-form.label>{{ __('messages.absences.start_time') }}</x-form.label>
                                             <input class="sc-input mt-1" type="time" name="starts_at" x-model="startsAt" required>
                                         </div>
                                         <div>
-                                            <label class="sc-label">{{ __('messages.absences.end_time') }}</label>
+                                            <x-form.label>{{ __('messages.absences.end_time') }}</x-form.label>
                                             <input class="sc-input mt-1" type="time" name="ends_at" x-model="endsAt" required>
                                         </div>
                                     </div>
@@ -168,12 +168,12 @@
                             </template>
 
                             <div>
-                                <label class="sc-label">{{ __('messages.absences.reason') }}</label>
+                                <x-form.label>{{ __('messages.absences.reason') }}</x-form.label>
                                 <textarea name="reason" class="sc-input mt-1 min-h-[100px]" required minlength="8" placeholder="Ex: Rendez-vous médical..."></textarea>
                             </div>
                             
                             <div>
-                                <label class="sc-label">Fichier de permission d'absence</label>
+                                <x-form.label>Fichier de permission d'absence</x-form.label>
                                 <div class="mt-1 flex justify-center rounded-lg border border-dashed border-slate-300 px-6 py-8 hover:bg-slate-50 transition-colors relative cursor-pointer">
                                     <div class="text-center">
                                         <svg class="mx-auto size-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>

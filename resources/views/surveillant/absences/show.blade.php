@@ -57,12 +57,16 @@
                         </div>
 
                         <div class="flex items-center gap-4">
-                            <button type="submit" name="action" value="resolved" class="sc-btn sc-btn-primary flex-1">
-                                Marquer comme Résolu
-                            </button>
-                            <button type="submit" name="action" value="rejected" class="sc-btn sc-btn-secondary flex-1 border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300">
-                                Refuser / Suspendre
-                            </button>
+                            <x-confirmation-modal title="Marquer comme Résolu" message="Êtes-vous sûr de vouloir marquer ce dossier comme résolu ?" confirmText="Résoudre" type="primary" class="flex-1">
+                                <button type="submit" name="action" value="resolved" class="sc-btn sc-btn-primary w-full">
+                                    Marquer comme Résolu
+                                </button>
+                            </x-confirmation-modal>
+                            <x-confirmation-modal title="Refuser / Suspendre" message="Êtes-vous sûr de vouloir refuser ou suspendre ce dossier ?" confirmText="Refuser" type="danger" class="flex-1">
+                                <button type="submit" name="action" value="rejected" class="sc-btn sc-btn-secondary w-full border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300">
+                                    Refuser / Suspendre
+                                </button>
+                            </x-confirmation-modal>
                         </div>
                     </form>
                 @else

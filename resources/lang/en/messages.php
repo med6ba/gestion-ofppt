@@ -2,7 +2,7 @@
 
 return [
     'brand' => 'Smart Campus OFPPT',
-    'locale' => ['fr' => 'Français', 'ar' => 'العربية', 'en' => 'English'],
+    'locale' => ['fr' => 'Français', 'ar' => 'العربية', 'en' => 'English', 'es' => 'Español'],
     'common' => [
         'login' => 'Login', 'register' => 'Register', 'logout' => 'Logout', 'email' => 'Email',
         'password' => 'Password', 'confirm_password' => 'Confirm password', 'remember_me' => 'Remember me',
@@ -109,6 +109,7 @@ return [
         'camera_unavailable' => 'Camera unavailable. Check browser permission.',
         'logout_confirm_title' => 'Confirm logout',
         'logout_confirm_text' => 'Do you really want to close your Smart Campus session?',
+        'demo_accounts' => 'Demo Accounts',
     ],
     'nav' => [
         'home' => 'Home', 'services' => 'Services', 'my_badge' => 'My badge',
@@ -241,5 +242,17 @@ return [
         'absence_admin_title' => 'New absence request', 'absence_admin_body' => ':name requested an absence authorization for :date.',
         'absence_approved_title' => 'Absence authorization approved', 'absence_approved_body' => 'Your absence request for :date was approved.',
         'absence_rejected_title' => 'Absence authorization rejected', 'absence_rejected_body' => 'Your absence request for :date was rejected.',
+    ],
+    'theme' => [
+        'light' => 'Light',
+        'dark' => 'Dark',
+        'system' => 'System',
+        'toggle' => 'Theme',
+    ],
+    'pwa' => [
+        'offline_title' => 'You are offline',
+        'offline_text' => 'Check your internet connection and try again.',
+        'retry' => 'Retry',
+        'install' => 'Install App',
     ],
 ];

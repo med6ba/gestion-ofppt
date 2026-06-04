@@ -43,13 +43,17 @@
                                     @csrf
                                     <label class="sc-label text-emerald-700">{{ __('messages.common.note') }}</label>
                                     <textarea name="surveillant_note" class="sc-input mt-1 min-h-20 bg-white" placeholder="{{ __('messages.common.optional_note') }}"></textarea>
-                                    <button class="sc-btn mt-3 w-full border border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-100">{{ __('messages.common.approve') }}</button>
+                                    <x-confirmation-modal title="Confirmer l'approbation" message="Êtes-vous sûr de vouloir approuver cette attestation ?" confirmText="{{ __('messages.common.approve') }}" cancelText="{{ __('messages.common.cancel') }}" type="primary">
+                                        <button class="sc-btn mt-3 w-full border border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-100">{{ __('messages.common.approve') }}</button>
+                                    </x-confirmation-modal>
                                 </form>
                                 <form method="POST" action="{{ route('attestations.reject', $requestItem) }}" class="rounded-lg border border-rose-200 bg-rose-50 p-3">
                                     @csrf
                                     <label class="sc-label text-rose-700">{{ __('messages.common.note') }}</label>
                                     <textarea name="surveillant_note" class="sc-input mt-1 min-h-20 bg-white" placeholder="{{ __('messages.common.optional_note') }}"></textarea>
-                                    <button class="sc-btn mt-3 w-full border border-rose-200 bg-white text-rose-700 hover:bg-rose-100">{{ __('messages.common.reject') }}</button>
+                                    <x-confirmation-modal title="Confirmer le refus" message="Êtes-vous sûr de vouloir refuser cette demande d'attestation ?" confirmText="{{ __('messages.common.reject') }}" cancelText="{{ __('messages.common.cancel') }}" type="danger">
+                                        <button class="sc-btn mt-3 w-full border border-rose-200 bg-white text-rose-700 hover:bg-rose-100">{{ __('messages.common.reject') }}</button>
+                                    </x-confirmation-modal>
                                 </form>
                             </div>
                         @else

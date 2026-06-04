@@ -74,12 +74,12 @@
                                 </div>
 
                                 <div>
-                                    <label class="sc-label">{{ __('messages.announcements.title_label') }}</label>
+                                    <x-form.label>{{ __('messages.announcements.title_label') }}</x-form.label>
                                     <input name="title" value="{{ old('title') }}" class="sc-input mt-1" required maxlength="160">
                                 </div>
 
                                 <div>
-                                    <label class="sc-label">{{ __('messages.announcements.body_label') }}</label>
+                                    <x-form.label>{{ __('messages.announcements.body_label') }}</x-form.label>
                                     <textarea name="body" class="sc-input mt-1 min-h-40" required minlength="10" maxlength="3000" placeholder="{{ __('messages.announcements.body_placeholder') }}">{{ old('body') }}</textarea>
                                 </div>
                             </div>

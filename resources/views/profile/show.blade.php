@@ -40,7 +40,7 @@
                     <form method="POST" action="{{ route('profile.update', $profile) }}" class="rounded-lg border border-slate-200 bg-slate-50 p-3">
                         @csrf
                         @method('PUT')
-                        <label class="sc-label">{{ __('messages.profile.edit_cni') }}</label>
+                        <x-form.label>{{ __('messages.profile.edit_cni') }}</x-form.label>
                         <input class="sc-input mt-1 uppercase" name="cni" value="{{ old('cni', $profile->cni) }}" required>
                         <button class="sc-btn sc-btn-secondary mt-3 w-full">{{ __('messages.profile.save_cni') }}</button>
                     </form>

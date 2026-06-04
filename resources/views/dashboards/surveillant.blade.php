@@ -52,12 +52,16 @@
                         <div class="flex flex-wrap gap-2">
                             <form method="POST" action="{{ route('attendance.severe-late.validate', $attendance) }}">
                                 @csrf
-                                <button class="sc-btn border border-emerald-200 bg-emerald-50 text-emerald-700">{{ __('messages.common.approve') }}</button>
+                                <x-confirmation-modal title="Confirmer l'approbation" message="Êtes-vous sûr de vouloir approuver ce retard ?" confirmText="{{ __('messages.common.approve') }}" cancelText="{{ __('messages.common.cancel') }}" type="primary">
+                                    <button class="sc-btn border border-emerald-200 bg-emerald-50 text-emerald-700">{{ __('messages.common.approve') }}</button>
+                                </x-confirmation-modal>
                             </form>
                             <form method="POST" action="{{ route('attendance.severe-late.reject', $attendance) }}" class="flex gap-2">
                                 @csrf
                                 <input name="rejection_reason" class="sc-input w-44" placeholder="{{ __('messages.absences.reason') }}">
-                                <button class="sc-btn border border-rose-200 bg-rose-50 text-rose-700">{{ __('messages.common.reject') }}</button>
+                                <x-confirmation-modal title="Confirmer le refus" message="Êtes-vous sûr de vouloir refuser ce retard ?" confirmText="{{ __('messages.common.reject') }}" cancelText="{{ __('messages.common.cancel') }}" type="danger">
+                                    <button class="sc-btn border border-rose-200 bg-rose-50 text-rose-700">{{ __('messages.common.reject') }}</button>
+                                </x-confirmation-modal>
                             </form>
                         </div>
                     </div>
