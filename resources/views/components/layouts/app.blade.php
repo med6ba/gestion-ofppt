@@ -152,7 +152,7 @@
         <div class="manar-backdrop" x-show="sidebarOpen" x-cloak @click="sidebarOpen = false"></div>
 
         <div class="manar-main">
-            <header class="manar-header flex items-center justify-between">
+            <header class="manar-header flex items-center justify-between relative">
                 <div class="flex min-w-0 items-center gap-3">
                     <button class="menu-toggle lg:hidden" :class="{ 'active': sidebarOpen }" @click="sidebarOpen = !sidebarOpen" type="button" aria-label="{{ __('messages.nav.open_menu') }}">
                         <span></span><span></span><span></span>
@@ -161,12 +161,12 @@
                         <div class="text-[11px] font-bold uppercase text-slate-400">{{ $user?->roleLabel() }}</div>
                         <h1 class="truncate text-xl font-bold text-slate-800">{{ $title ?? 'Dashboard' }}</h1>
                     </div>
-                    <div class="manar-clock hidden sm:block" x-data="campusClock(@js($clockTimezone), @js($clockNow->format('H:i:s')), @js($clockOffset))">
-                        <div class="manar-clock-time" x-text="time">{{ $clockNow->format('H:i:s') }}</div>
-                        <div class="manar-clock-zone">
-                            <span>{{ strtoupper($clockTimezone) }}</span>
-                            <span class="manar-clock-offset">(<span x-text="offset">{{ $clockOffset }}</span>)</span>
-                        </div>
+                </div>
+
+                <div class="absolute left-1/2 -translate-x-1/2 manar-clock hidden sm:block !border-l-0 !pl-0 text-center" x-data="campusClock(@js($clockTimezone), @js($clockNow->format('H:i:s')), @js($clockOffset))">
+                    <div class="manar-clock-time text-slate-700" x-text="time">{{ $clockNow->format('H:i:s') }}</div>
+                    <div class="manar-clock-zone justify-center text-slate-400 mt-0.5">
+                        <span>{{ ucfirst($clockNow->locale(app()->getLocale())->translatedFormat('l d M Y')) }}</span>
                     </div>
                 </div>
 
