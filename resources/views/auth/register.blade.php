@@ -10,7 +10,7 @@
     <main class="mx-auto flex min-h-screen max-w-xl items-center px-4 py-10">
         <div class="w-full sc-card p-6">
             <div class="flex items-center justify-between gap-4">
-                <img class="h-12 w-36 object-contain" src="{{ asset('images/ofppt-logo.svg') }}" alt="OFPPT logo">
+                <img class="h-16 w-16 object-contain drop-shadow-[0_0_18px_rgba(59,130,246,0.35)]" src="{{ asset('logo/ofppt-logo.png') }}" alt="OFPPT logo">
                 <a href="{{ route('login') }}" class="text-sm font-semibold text-campus-700">Back to login</a>
             </div>
             <h1 class="mt-4 text-2xl font-bold">Stagiaire registration</h1>

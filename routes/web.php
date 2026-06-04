@@ -65,11 +65,16 @@ Route::middleware(['auth', 'approved'])->group(function () {
     });
 
     Route::middleware('role:surveillant')->group(function () {
-        Route::post('/timetable/manage/active-week', [TimetableController::class, 'activateWeek'])->name('timetable.active-week');
-        Route::post('/timetable/manage', [TimetableController::class, 'store'])->name('timetable.store');
-        Route::get('/timetable/manage/{session}/edit', [TimetableController::class, 'edit'])->name('timetable.edit');
-        Route::put('/timetable/manage/{session}', [TimetableController::class, 'update'])->name('timetable.update');
-        Route::delete('/timetable/manage/{session}', [TimetableController::class, 'destroy'])->name('timetable.destroy');
+        Route::post('/timetable/weekly', [TimetableController::class, 'storeWeeklyTimetable'])->name('timetable.weekly.store');
+        Route::post('/timetable/weekly/{weeklyTimetable}/launch', [TimetableController::class, 'launchWeeklyTimetable'])->name('timetable.weekly.launch');
+        Route::post('/timetable/weekly/{weeklyTimetable}/duplicate', [TimetableController::class, 'duplicateWeeklyTimetable'])->name('timetable.weekly.duplicate');
+        Route::post('/timetable/weekly/{weeklyTimetable}/archive', [TimetableController::class, 'archiveWeeklyTimetable'])->name('timetable.weekly.archive');
+        Route::post('/timetable/sessions', [TimetableController::class, 'storeSession'])->name('timetable.sessions.store');
+        Route::put('/timetable/sessions/{session}', [TimetableController::class, 'updateSession'])->name('timetable.sessions.update');
+        Route::delete('/timetable/sessions/{session}', [TimetableController::class, 'destroySession'])->name('timetable.sessions.destroy');
+        Route::get('/timetable/cancellation-requests', [TimetableController::class, 'cancellationRequests'])->name('timetable.cancellations.index');
+        Route::post('/timetable/cancellation-requests/{cancellationRequest}/approve', [TimetableController::class, 'approveCancellation'])->name('timetable.cancellations.approve');
+        Route::post('/timetable/cancellation-requests/{cancellationRequest}/reject', [TimetableController::class, 'rejectCancellation'])->name('timetable.cancellations.reject');
 
         Route::post('/resources/filieres', [ResourceController::class, 'storeFiliere'])->name('resources.filieres.store');
         Route::post('/resources/groups', [ResourceController::class, 'storeGroup'])->name('resources.groups.store');
@@ -81,6 +86,7 @@ Route::middleware(['auth', 'approved'])->group(function () {
     });
 
     Route::middleware('role:formateur')->group(function () {
+        Route::post('/formateur/timetable/sessions/{session}/cancel-request', [TimetableController::class, 'requestCancellation'])->name('timetable.sessions.cancel-request');
         Route::get('/formateur/teaching', [DashboardController::class, 'formateurTeaching'])->name('formateur.teaching');
         Route::get('/formateur/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::get('/formateur/attendance/{session}', [AttendanceController::class, 'show'])->name('attendance.show');
@@ -106,6 +112,8 @@ Route::middleware(['auth', 'approved'])->group(function () {
     });
 
     Route::get('/timetable', [TimetableController::class, 'mySchedule'])->name('timetable.mine');
+    Route::get('/timetable/archive', [TimetableController::class, 'archive'])->name('timetable.archive');
+    Route::get('/timetable/sessions/{session}', [TimetableController::class, 'sessionDetails'])->name('timetable.sessions.details');
     Route::get('/presence-xp', [AttendanceController::class, 'leaderboard'])->name('attendance.leaderboard');
     Route::get('/announcements', fn () => view('announcements.index'))->name('announcements.index');
     Route::get('/settings', fn () => view('settings.index'))->name('settings.index');

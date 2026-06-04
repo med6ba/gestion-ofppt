@@ -14,6 +14,7 @@ class TimetableSession extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'weekly_timetable_id',
         'group_id',
         'module_id',
         'formateur_id',
@@ -26,6 +27,9 @@ class TimetableSession extends Model
         'ends_at',
         'status',
         'change_note',
+        'cancellation_reason',
+        'cancelled_by',
+        'cancelled_at',
         'created_by',
     ];
 
@@ -34,7 +38,13 @@ class TimetableSession extends Model
         return [
             'starts_on' => 'date',
             'ends_on' => 'date',
+            'cancelled_at' => 'datetime',
         ];
+    }
+
+    public function weeklyTimetable(): BelongsTo
+    {
+        return $this->belongsTo(WeeklyTimetable::class);
     }
 
     public function group(): BelongsTo
@@ -67,6 +77,16 @@ class TimetableSession extends Model
         return $this->hasMany(AttendanceSession::class);
     }
 
+    public function cancellationRequests(): HasMany
+    {
+        return $this->hasMany(SessionCancellationRequest::class);
+    }
+
+    public function cancelledByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
     public function activeAttendanceSession(): HasOne
     {
         return $this->hasOne(AttendanceSession::class)
@@ -90,6 +110,11 @@ class TimetableSession extends Model
         return substr($this->starts_at, 0, 5).' - '.substr($this->ends_at, 0, 5);
     }
 
+    public function isCancelled(): bool
+    {
+        return $this->status === 'cancelled';
+    }
+
     public function scopeForDate($query, Carbon $date)
     {
         if ($date->dayOfWeekIso > 6) {
@@ -99,8 +124,7 @@ class TimetableSession extends Model
         return $query
             ->where('day_of_week', $date->dayOfWeekIso)
             ->whereDate('starts_on', '<=', $date->toDateString())
-            ->whereDate('ends_on', '>=', $date->toDateString())
-            ->where('status', '!=', 'cancelled');
+            ->whereDate('ends_on', '>=', $date->toDateString());
     }
 
     public function scopeForWeek($query, Carbon $weekStart)
@@ -110,7 +134,6 @@ class TimetableSession extends Model
         return $query
             ->whereBetween('day_of_week', [1, 6])
             ->whereDate('starts_on', '<=', $weekEnd->toDateString())
-            ->whereDate('ends_on', '>=', $weekStart->toDateString())
-            ->where('status', '!=', 'cancelled');
+            ->whereDate('ends_on', '>=', $weekStart->toDateString());
     }
 }

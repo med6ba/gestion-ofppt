@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="theme-color" content="#6366f1">
+    <meta name="theme-color" content="#005b9f">
     <title>Login - Smart Campus OFPPT</title>
     <link rel="manifest" href="/manifest.json">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -18,7 +18,7 @@
 
             <div class="relative z-10 flex h-full w-full flex-col justify-between px-12 py-10">
                 <a href="{{ route('login') }}" class="flex items-center gap-3">
-                    <img class="h-14 w-44 object-contain" src="{{ asset('images/ofppt-logo-white.svg') }}" alt="OFPPT logo">
+                    <img class="h-16 w-16 object-contain drop-shadow-[0_0_18px_rgba(255,255,255,0.25)]" src="{{ asset('logo/ofppt-logo.png') }}" alt="OFPPT logo">
                 </a>
 
                 <div class="max-w-xl pb-8">
@@ -34,7 +34,7 @@
         <section class="relative flex w-full min-h-screen flex-col items-center justify-center bg-white px-4 py-12 lg:min-h-0 lg:w-1/2 lg:px-8 xl:w-[45%]">
             <div class="fixed left-6 top-5 z-10 lg:hidden">
                 <a href="{{ route('login') }}" class="flex items-center gap-2">
-                    <img class="h-10 w-32 object-contain" src="{{ asset('images/ofppt-logo.svg') }}" alt="OFPPT logo">
+                    <img class="h-12 w-12 object-contain drop-shadow-[0_0_18px_rgba(59,130,246,0.35)]" src="{{ asset('logo/ofppt-logo.png') }}" alt="OFPPT logo">
                     <span class="font-bold text-slate-700">Smart Campus OFPPT</span>
                 </a>
             </div>

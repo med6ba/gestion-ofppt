@@ -22,10 +22,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="theme-color" content="#116d5b">
+    <meta name="theme-color" content="#009245">
     <title>{{ $title ?? 'Smart Campus OFPPT' }}</title>
     <link rel="manifest" href="/manifest.json">
-    <link rel="icon" href="{{ asset('images/ofppt-mark.svg') }}" type="image/svg+xml">
+    <link rel="icon" href="{{ asset('logo/ofppt-logo.png') }}" type="image/png">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="text-slate-700 antialiased">
@@ -43,7 +43,7 @@
         <aside class="manar-sidebar" :class="{ 'mobile-open': sidebarOpen, 'collapsed': sidebarCollapsed }">
             <div class="manar-sidebar-logo">
                 <a href="{{ route('dashboard.redirect') }}" class="flex min-w-0 items-center gap-3">
-                    <img class="h-10 w-14 rounded-xl bg-white object-contain p-1.5 shadow-sm ring-1 ring-slate-100" src="{{ asset('images/ofppt-mark.svg') }}" alt="OFPPT logo">
+                    <img class="h-12 w-12 object-contain drop-shadow-[0_0_12px_rgba(59,130,246,0.35)]" src="{{ asset('logo/ofppt-logo.png') }}" alt="OFPPT logo">
                     <div class="min-w-0 menu-text">
                         <div class="truncate text-sm font-bold text-slate-800">Smart Campus</div>
                         <div class="truncate text-xs font-semibold text-primary">OFPPT</div>

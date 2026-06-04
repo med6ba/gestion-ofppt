@@ -8,8 +8,8 @@
         5 => 'VENDREDI',
         6 => 'SAMEDI',
     ];
-    $startHour = $startHour ?? 6;
-    $endHour = $endHour ?? 18;
+    $startHour = $startHour ?? 8;
+    $endHour = $endHour ?? 19;
     $hourHeight = $hourHeight ?? 96;
     $gridHeight = ($endHour - $startHour) * $hourHeight;
     $gridMinWidth = 88 + (count($days) * 190);
@@ -28,11 +28,13 @@
             @isset($groups)
                 <form method="GET" action="{{ route('timetable.index') }}" class="edt-group-select">
                     <span class="edt-dot"></span>
-                    <select name="group_id" aria-label="Groupe" onchange="this.form.submit()">
-                        @foreach ($groups as $group)
-                            <option value="{{ $group->id }}" @selected((int) $selectedGroupId === $group->id)>{{ $group->name }}</option>
-                        @endforeach
-                    </select>
+                    <x-ui.select
+                        name="group_id"
+                        :alpine-options="Js::from($groups->map(fn($g) => ['id' => $g->id, 'name' => $g->name]))"
+                        initial-value="{{ $selectedGroupId }}"
+                        button-class="bg-transparent border-none outline-none text-sm font-black text-inherit cursor-pointer !m-0 !p-0 shadow-none min-w-32"
+                        x-on:change="$el.closest('form').submit()"
+                    />
                 </form>
             @else
                 <div class="edt-chip">
@@ -42,11 +44,27 @@
             @endisset
 
             @isset($selectedWeekStart)
-                <div class="edt-chip edt-week-chip {{ ($isSelectedWeekActive ?? false) ? 'edt-week-chip-active' : '' }}">
-                    <x-ui.icon name="calendar" size="size-4" />
-                    <span>Semaine {{ $selectedWeekStart->weekOfYear }}</span>
-                    <span class="edt-week-dates">{{ $selectedWeekStart->format('d/m') }} - {{ ($selectedWeekEnd ?? $selectedWeekStart->copy()->addDays(5))->format('d/m/Y') }}</span>
-                </div>
+                @if (isset($weekHistory) && $weekHistory->isNotEmpty())
+                    <form method="GET" action="{{ route('timetable.index') }}" class="edt-chip edt-week-chip {{ ($isSelectedWeekActive ?? false) ? 'edt-week-chip-active' : '' }}">
+                        @if(isset($selectedGroupId))
+                            <input type="hidden" name="group_id" value="{{ $selectedGroupId }}">
+                        @endif
+                        <x-ui.icon name="calendar" size="size-4" />
+                        <x-ui.select
+                            name="week_start"
+                            :alpine-options="Js::from($weekHistory->map(fn($wh) => ['id' => $wh->week_start_date->toDateString(), 'name' => 'Semaine ' . $wh->week_start_date->weekOfYear . ' (' . $wh->week_start_date->format('d/m') . ' - ' . $wh->week_end_date->format('d/m/Y') . ')']))"
+                            initial-value="{{ $selectedWeekStart->toDateString() }}"
+                            button-class="bg-transparent border-none outline-none text-sm font-black text-inherit cursor-pointer !m-0 !p-0 shadow-none min-w-48"
+                            x-on:change="$el.closest('form').submit()"
+                        />
+                    </form>
+                @else
+                    <div class="edt-chip edt-week-chip {{ ($isSelectedWeekActive ?? false) ? 'edt-week-chip-active' : '' }}">
+                        <x-ui.icon name="calendar" size="size-4" />
+                        <span>Semaine {{ $selectedWeekStart->weekOfYear }}</span>
+                        <span class="edt-week-dates">{{ $selectedWeekStart->format('d/m') }} - {{ ($selectedWeekEnd ?? $selectedWeekStart->copy()->addDays(5))->format('d/m/Y') }}</span>
+                    </div>
+                @endif
             @endisset
         </div>
 
@@ -67,7 +85,9 @@
 
             <div class="edt-time-axis">
                 @for ($hour = $startHour; $hour <= $endHour; $hour++)
-                    <div class="edt-time-label" style="top: {{ ($hour - $startHour) * $hourHeight }}px">{{ $hour }}:00</div>
+                    @if ($hour !== $endHour)
+                        <div class="edt-time-label" style="top: {{ ($hour - $startHour) * $hourHeight }}px">{{ $hour }}:00</div>
+                    @endif
                 @endfor
             </div>
 
@@ -82,14 +102,11 @@
                             $color = $palette[$session->id % count($palette)];
                         @endphp
                         @if ($end > $start)
-                            <article class="edt-event edt-event-{{ $color }} {{ ($showActions ?? false) ? 'edt-event-actionable' : '' }}" style="top: {{ $top }}px; height: {{ $height }}px;">
+                            <article class="edt-event edt-event-{{ $color }} {{ $session->isCancelled() ? 'edt-event-cancelled' : '' }}" style="top: {{ $top }}px; height: {{ $height }}px;">
                                 <div class="truncate text-xs font-bold">{{ $session->timeLabel() }}</div>
                                 <div class="mt-1 truncate text-sm font-black">{{ $session->module->name }}</div>
                                 <div class="mt-1 truncate text-xs">{{ $session->group->code }} | {{ $session->room->code }}</div>
                                 <div class="mt-1 truncate text-[11px] opacity-80">{{ $session->formateur->name }}</div>
-                                @if ($showActions ?? false)
-                                    <a href="{{ route('timetable.edit', $session) }}" class="edt-event-link">Modifier</a>
-                                @endif
                             </article>
                         @endif
                     @endforeach

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="OFPPT - La Voie de l'Avenir">
+  <g fill="none" stroke-linecap="square" stroke-linejoin="miter" stroke-width="9">
+    <path d="M55 74 85 44 115 74 85 104Z" stroke="#008c50"/>
+    <path d="M87 74 117 44 147 74 117 104Z" stroke="#8d99a3"/>
+    <path d="M119 74 149 44 179 74 149 104Z" stroke="#006caf"/>
+  </g>
+  <text x="120" y="151" fill="#111827" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="43" font-weight="700" letter-spacing=".5">OFPPT</text>
+  <text x="120" y="176" fill="#1f5f9f" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="15" font-style="italic" font-weight="700">La Voie de l'Avenir</text>
+</svg>
